@@ -12,11 +12,14 @@ import mwmanger.vo.RawCommandsVO;
 
 public class MainWork {
 
+	private final ExecutorService executorService = Executors.newCachedThreadPool();
+
 	public long doAgentWork(){
 		
 		RawCommandsVO rcv = new RawCommandsVO();
-		
-        for (;;) {
+		Config config = Config.getInstance();
+
+        while (true) {
 			   
             try {
 
@@ -28,34 +31,32 @@ public class MainWork {
 	    			Common.updateToken();
 	    	    	
 	    		}else if(rcv.getReturnCode()>0){
-	    			
-		    	    for(int i=0;i<rcv.getCommands().size();i++){
+
+					for (Object commandObj : rcv.getCommands()) {
 	   
-		    	        JSONObject command_ = (JSONObject) rcv.getCommands().get(i);
+		    	        JSONObject command = (JSONObject) commandObj;
 		    	        
-		    	        String command_class  = (String)command_.get("command_class");
+		    	        String command_class  = (String)command.get("command_class");
 			    		
 		    	        if(command_class==null){
-		    	        	Config.getLogger().warning("Command_class not found : "+command_.toJSONString());
+		    	        	config.getLogger().warning("Command_class not found : "+command_.toJSONString());
 		    	        	continue;
 		    	        }
 		    	        
-		    	        OrderCallerThread thread = new OrderCallerThread("mwmanger.order."+command_class, command_);
-		    	        thread.setDaemon(true);
-		    	        thread.start();				    		   
-			    		//thread.setName(command_class+"_");
+                        OrderCallerThread thread = new OrderCallerThread("mwmanger.order." + command_class, command);
+                        executorService.submit(thread);
 	
 		    	    }
 		    	    
 	    		}
 		    	   
-	    	    Thread.sleep(Config.getCommand_check_cycle()*1000);
+	    	    Thread.sleep(config.getCommand_check_cycle() * 1000);
 
 	    	} catch (InterruptedException e) {
-	    	    Config.getLogger().log(Level.SEVERE, "shutdown by Interrupted : " + e.getMessage(), e);
+	    	    config.getLogger().log(Level.SEVERE, "shutdown by Interrupted : " + e.getMessage(), e);
 	    	    return -1;
 	    	} catch (Exception e) {
-	    	    Config.getLogger().log(Level.SEVERE, e.getMessage(), e);
+	    	    config.getLogger().log(Level.SEVERE, e.getMessage(), e);
 	    	    return -1;
 	    	}
 
@@ -65,17 +66,14 @@ public class MainWork {
 	
     private RawCommandsVO suckCommands() {
     	
-    	JSONArray commands = new JSONArray();
-    	
     	RawCommandsVO rcv = new RawCommandsVO();
-    	rcv.setReturnCode(1);
+		Config config = Config.getInstance();
+		rcv.setReturnCode(1);
     	
-        String uri = "";
-			
-		uri =  Config.getServer_url() + Config.getGet_command_uri() + "/" + Config.getAgent_id();
-			
-		Config.getLogger().fine("getCommands : "+uri);
-		MwResponseVO mrvo = Common.httpGET(uri, Config.getAccess_token());
+        String uri = config.getServer_url() + Config.getGet_command_uri() + "/" + Config.getAgent_id();
+		config.getLogger().fine("getCommands : "+uri);
+
+		MwResponseVO mrvo = Common.httpGET(uri, config.getAccess_token());
 			
 	    //Access Token Expired
 	    if(mrvo.getStatusCode()==401){

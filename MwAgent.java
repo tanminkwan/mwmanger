@@ -10,7 +10,8 @@ public class MwAgent {
 	
     public static void main(String[] args) {
 
-    	Config.setConfig();
+		Config config = Config.getInstance();
+    	config.setConfig();
     	
     	Runtime.getRuntime().addShutdownHook(new ShutdownThread());
 		
@@ -24,7 +25,7 @@ public class MwAgent {
 		
 		if(rtn<0){
 			
-			Config.getLogger().info("First commands execution failed.");
+			config.getLogger().info("First commands execution failed.");
 	        System.exit(0);
 	        
 		}

@@ -21,14 +21,15 @@ public class OrderCallerThread extends Thread {
     public void run() {	    	
     	
     	OrderCaller.executeOrder(command_class, command);
-    	
+
     	try {
     		Thread.sleep(500);
     	} catch (InterruptedException e) {
-    	    Config.getLogger().log(Level.WARNING, e.getMessage(), e);
+    	    Config.getInstance().getLogger().log(Level.WARNING, e.getMessage(), e);
     	}
 
-    	Config.getLogger().info(command_class + " Thread exit.");
+    	Config.getInstance().getLogger().info(command_class + " Thread exit.");
+
     }
 
 }
