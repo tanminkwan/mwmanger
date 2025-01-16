@@ -39,32 +39,35 @@ public class Common {
 	private static CloseableHttpClient httpClient = null;
 	private static CloseableHttpClient httpsClient = null;
 
-	public static ArrayList<ResultVO> makeOneResultArray(ResultVO rv, CommandVO command){
-		ArrayList<ResultVO> rvs = new ArrayList<ResultVO>();
-		rv.setHostName(command.getHostName());
-		rv.setTargetFileName(command.getTargetFileName());
-		rv.setTargetFilePath(command.getTargetFilePath());
-		rvs.add(rv);
-		return rvs;
-	}
+    public static ArrayList<ResultVO> makeOneResultArray(ResultVO rv, CommandVO command){
+        fillResult(rv, command);
+        ArrayList<ResultVO> rvs = new ArrayList<ResultVO>();
+        rvs.add(rv);
+        return rvs;
+    }
 
-	public static ResultVO fillResult(ResultVO rv, CommandVO command){
-		rv.setHostName(command.getHostName());
-		rv.setTargetFileName(command.getTargetFileName());
-		rv.setTargetFilePath(command.getTargetFilePath());
-		return rv;
-	}
+    public static ResultVO fillResult(ResultVO rv, CommandVO command){
+        rv.setHostName(command.getHostName());
+        rv.setTargetFileName(command.getTargetFileName());
+        rv.setTargetFilePath(command.getTargetFilePath());
+        return rv;
+    }
 
-	private static CloseableHttpClient getHttpClient(String url){
-		
-		if(httpsClient==null || httpClient==null)createHttpsClient();
-		
-		if (url.toLowerCase().startsWith("https")) {
-			return httpsClient;
-		}else{
-			return httpClient;
-		}		    	
-	}
+    private static CloseableHttpClient getHttpClient(String url){
+        if(httpsClient == null || httpClient == null) {
+            synchronized (Common.class) {
+                if(httpsClient == null || httpClient == null) {
+                    createHttpsClient();
+                }
+            }
+        }
+        
+        if (url.toLowerCase().startsWith("https")) {
+            return httpsClient;
+        } else {
+            return httpClient;
+        }                
+    }
 	
     public static void createHttpsClient() {
     	

@@ -14,123 +14,125 @@ import java.util.logging.SimpleFormatter;
 
 public final class Config {
 	
-	public static Config getInstance(){
-		return LazyHolder.INSTANCE;
-	}
-	
-	private static class LazyHolder {
-		private static final Config INSTANCE = new Config();
-	}
+    private static final Config INSTANCE = new Config();
 
-	static String agent_version = "0000.0006.0005";
-	static String agent_type = "JAVAAGENT";
-	static String hostName = "";
-	static String userName = "";
-	static String server_url = "";
-	static String get_command_uri = "";
-	static String post_agent_uri = "";
-	static String agent_id = "";
-	static String access_token = "";
-	static String refresh_token = "";
-	static String kafka_broker_address = "";
-	static long command_check_cycle = 60;
+	private String agent_version = "0000.0006.0005";
+	private String agent_type = "JAVAAGENT";
+	private String hostName = "";
+	private String userName = "";
+	private String server_url = "";
+	private String get_command_uri = "";
+	private String post_agent_uri = "";
+	private String agent_id = "";
+	private String access_token = "";
+	private String refresh_token = "";
+	private String kafka_broker_address = "";
+	private long command_check_cycle = 60;
 	
-	static Logger logger;
+	private Logger logger;
 	
-	static String os = "";	
+	private String os = "";	
 
-	static Map<String, String> env = Collections.emptyMap();
+	private Map<String, String> env = Collections.emptyMap();
 
-	public static String getKafka_broker_address() {
+	private Config() {
+        // Private constructor to prevent instantiation
+    }
+
+    public static Config getInstance() {
+        return INSTANCE;
+    }
+
+	public String getKafka_broker_address() {
 		return kafka_broker_address;
 	}
-	public static void setKafka_broker_address(String kafka_broker_address) {
+	public void setKafka_broker_address(String kafka_broker_address) {
 		Config.kafka_broker_address = kafka_broker_address;
 	}
 
-	public static Logger getLogger() {
+	public Logger getLogger() {
 		return logger;
 	}
-	public static void setLogger(Logger logger) {
+	public void setLogger(Logger logger) {
 		Config.logger = logger;
 	}
 
-	public static Map<String, String> getEnv() {
+	public Map<String, String> getEnv() {
 		return env;
 	}
-	public static void setEnv(Map<String, String> env) {
+	public void setEnv(Map<String, String> env) {
 		Config.env = env;
 	}
-	public static String getOs() {
+	public String getOs() {
 		return os;
 	}
-	public static void setOs(String os) {
+	public void setOs(String os) {
 		Config.os = os;
 	}
 
-	public static String getAgent_version() {
+	public String getAgent_version() {
 		return agent_version;
 	}
-	public static String getAgent_type() {
+	public String getAgent_type() {
 		return agent_type;
 	}
 
-	public static String getHostName() {
+	public String getHostName() {
 		return hostName;
 	}
-	public static void setHostName(String hostName) {
+	public void setHostName(String hostName) {
 		Config.hostName = hostName;
 	}
-	public static String getUserName() {
+	public String getUserName() {
 		return userName;
 	}
-	public static void setUserName(String userName) {
+	public void setUserName(String userName) {
 		Config.userName = userName;
 	}
-	public static String getServer_url() {
+	public String getServer_url() {
 		return server_url;
 	}
-	public static void setServer_url(String server_url) {
+	public void setServer_url(String server_url) {
 		Config.server_url = server_url;
 	}
-	public static String getGet_command_uri() {
+	public String getGet_command_uri() {
 		return get_command_uri;
 	}
-	public static void setGet_command_uri(String get_command_uri) {
+	public void setGet_command_uri(String get_command_uri) {
 		Config.get_command_uri = get_command_uri;
 	}
-	public static String getPost_agent_uri() {
+	public String getPost_agent_uri() {
 		return post_agent_uri;
 	}
-	public static void setPost_agent_uri(String post_agent_uri) {
+	public void setPost_agent_uri(String post_agent_uri) {
 		Config.post_agent_uri = post_agent_uri;
 	}
-	public static String getAgent_id() {
+	public String getAgent_id() {
 		return agent_id;
 	}
-	public static void setAgent_id(String agent_id) {
+	public void setAgent_id(String agent_id) {
 		Config.agent_id = agent_id;
 	}
-	public static String getAccess_token() {
+	public String getAccess_token() {
 		return access_token;
 	}
-	public static void setAccess_token(String access_token) {
+	public void setAccess_token(String access_token) {
 		Config.access_token = access_token;
 	}
-	public static String getRefresh_token() {
+	public String getRefresh_token() {
 		return refresh_token;
 	}
-	public static void setRefresh_token(String refresh_token) {
+	public void setRefresh_token(String refresh_token) {
 		Config.refresh_token = refresh_token;
 	}	
-	public static long getCommand_check_cycle() {
+	public long getCommand_check_cycle() {
 		return command_check_cycle;
 	}
-	public static void setCommand_check_cycle(long command_check_cycle) {
+	public void setCommand_check_cycle(long command_check_cycle) {
 		Config.command_check_cycle = command_check_cycle;
 	}
 
-    public static long setConfig() {
+    public long setConfig() {
 
 		Properties prop = new Properties();
 		
@@ -184,10 +186,10 @@ public final class Config {
 			getLogger().info("Access Token is updated.");
 			
 		}catch(IOException e){
-        	Config.getLogger().log(Level.SEVERE, e.getMessage(), e);
+        	getLogger().log(Level.SEVERE, e.getMessage(), e);
 			return -1;
 		}catch(IllegalArgumentException e){
-        	Config.getLogger().log(Level.SEVERE, e.getMessage(), e);
+        	getLogger().log(Level.SEVERE, e.getMessage(), e);
 			return -2;
 		}
 		
@@ -227,7 +229,7 @@ public final class Config {
 		
     }
     
-    public static long updateProperty(String item, String value){
+    public long updateProperty(String item, String value){
     	
     	try{
     		
@@ -248,7 +250,7 @@ public final class Config {
 			//FileUtils.writeStringToFile(path, newContent, "UTF-8");
     	
     	}catch(IOException e){
-			Config.getLogger().log(Level.SEVERE, e.getMessage(), e);
+			getLogger().log(Level.SEVERE, e.getMessage(), e);
 			return -1;
 		}
     	
