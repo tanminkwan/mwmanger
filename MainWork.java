@@ -21,48 +21,48 @@ public class MainWork {
 		RawCommandsVO rcv = new RawCommandsVO();
 		Config config = Config.getInstance();
 
-        while (true) {
-			   
-            try {
-
-		    	rcv = suckCommands();
-
-		    	//Access Token Expired
-	    		if(rcv.getReturnCode()==0){
-	    			
-	    			Common.updateToken();
-	    	    	
-	    		}else if(rcv.getReturnCode()>0){
-
-					for (Object commandObj : rcv.getCommands()) {
-	   
-		    	        JSONObject command = (JSONObject) commandObj;
-		    	        
-		    	        String command_class  = (String)command.get("command_class");
-			    		
-		    	        if(command_class==null){
-		    	        	config.getLogger().warning("Command_class not found : "+command_.toJSONString());
-		    	        	continue;
-		    	        }
-		    	        
-                        OrderCallerThread thread = new OrderCallerThread("mwmanger.order." + command_class, command);
-                        executorService.submit(thread);
+	        while (true) {
+				   
+	            try {
 	
-		    	    }
-		    	    
-	    		}
-		    	   
-	    	    Thread.sleep(config.getCommand_check_cycle() * 1000);
-
-	    	} catch (InterruptedException e) {
-	    	    config.getLogger().log(Level.SEVERE, "shutdown by Interrupted : " + e.getMessage(), e);
-	    	    return -1;
-	    	} catch (Exception e) {
-	    	    config.getLogger().log(Level.SEVERE, e.getMessage(), e);
-	    	    return -1;
-	    	}
-
-        }
+			    	rcv = suckCommands();
+	
+			    	//Access Token Expired
+		    		if(rcv.getReturnCode()==0){
+		    			
+		    			Common.updateToken();
+		    	    	
+		    		}else if(rcv.getReturnCode()>0){
+	
+						for (Object commandObj : rcv.getCommands()) {
+		   
+			    	        JSONObject command = (JSONObject) commandObj;
+			    	        
+			    	        String command_class  = (String)command.get("command_class");
+				    		
+			    	        if(command_class==null){
+			    	        	config.getLogger().warning("Command_class not found : "+command_.toJSONString());
+			    	        	continue;
+			    	        }
+			    	        
+	                        OrderCallerThread thread = new OrderCallerThread("mwmanger.order." + command_class, command);
+	                        executorService.submit(thread);
+		
+			    	    }
+			    	    
+		    		}
+			    	   
+		    	    Thread.sleep(config.getCommand_check_cycle() * 1000);
+	
+		    	} catch (InterruptedException e) {
+		    	    config.getLogger().log(Level.SEVERE, "shutdown by Interrupted : " + e.getMessage(), e);
+		    	    return -1;
+		    	} catch (Exception e) {
+		    	    config.getLogger().log(Level.SEVERE, e.getMessage(), e);
+		    	    return -1;
+		    	}
+	
+	        }
 		
 	}
 	
