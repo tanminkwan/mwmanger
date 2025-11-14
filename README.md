@@ -5,6 +5,9 @@ MwManger는 Leebalso(리발소) 프로젝트의 에이전트 프로그램으로,
 ## 목차
 - [프로젝트 개요](#프로젝트-개요)
 - [주요 특징](#주요-특징)
+- [시스템 요구사항](#시스템-요구사항)
+- [필수 라이브러리](#필수-라이브러리)
+- [빌드 방법](#빌드-방법)
 - [시스템 아키텍처](#시스템-아키텍처)
 - [프로젝트 구조](#프로젝트-구조)
 - [설정 방법](#설정-방법)
@@ -20,6 +23,50 @@ MwManger는 분산 환경의 서버 관리를 자동화하기 위한 에이전�
 
 **버전**: 0000.0008.0005
 **타입**: JAVAAGENT
+
+## 시스템 요구사항
+
+- **JDK**: 1.8 (Java 8) 이상
+- **메모리**: 최소 256MB
+- **디스크**: 최소 100MB
+- **네트워크**: Leebalso 서버 및 Kafka 브로커 접근 가능
+
+## 필수 라이브러리
+
+프로젝트는 다음 외부 라이브러리에 의존합니다 (JDK 1.8 호환):
+
+| 라이브러리 | 버전 | 용도 |
+|-----------|------|------|
+| Apache HttpClient | 4.5.14 | HTTP/HTTPS 통신 |
+| Apache Kafka Client | 2.8.2 | Kafka 메시징 |
+| BouncyCastle | 1.70 | TLS 1.2 지원 (AIX) |
+| JSON Simple | 1.1.1 | JSON 처리 |
+| Apache Commons Codec | 1.15 | 인코딩 유틸리티 |
+| SLF4J | 1.7.36 | 로깅 (Kafka 의존성) |
+
+자세한 의존성 정보는 [DEPENDENCIES.md](DEPENDENCIES.md) 참조
+
+## 빌드 방법
+
+### Maven 사용
+
+```bash
+# 의존성 포함 실행 가능 JAR 생성
+mvn clean package
+
+# 생성된 파일
+target/mwmanger-0000.0008.0005-jar-with-dependencies.jar
+```
+
+### Gradle 사용
+
+```bash
+# Fat JAR 생성
+gradle fatJar
+
+# 생성된 파일
+build/libs/mwmanger-all-0000.0008.0005.jar
+```
 
 ## 주요 특징
 
@@ -173,7 +220,19 @@ log_level=INFO
 
 ## 실행 방법
 
-### 직접 실행
+### Fat JAR 실행 (권장)
+
+Maven 또는 Gradle로 빌드한 경우:
+
+```bash
+# Maven으로 빌드한 경우
+java -jar target/mwmanger-0000.0008.0005-jar-with-dependencies.jar
+
+# Gradle으로 빌드한 경우
+java -jar build/libs/mwmanger-all-0000.0008.0005.jar
+```
+
+### Classpath 직접 지정
 
 ```bash
 java -cp ".:lib/*" mwmanger.MwAgent
@@ -182,6 +241,10 @@ java -cp ".:lib/*" mwmanger.MwAgent
 ### 백그라운드 실행
 
 ```bash
+# Fat JAR 실행
+nohup java -jar mwmanger-all.jar > /dev/null 2>&1 &
+
+# Classpath 지정 실행
 nohup java -cp ".:lib/*" mwmanger.MwAgent > /dev/null 2>&1 &
 ```
 
@@ -198,7 +261,10 @@ After=network.target
 Type=simple
 User=mwagent
 WorkingDirectory=/opt/mwagent
-ExecStart=/usr/bin/java -cp ".:lib/*" mwmanger.MwAgent
+# Fat JAR 실행 (권장)
+ExecStart=/usr/bin/java -jar /opt/mwagent/mwmanger-all.jar
+# 또는 Classpath 지정
+# ExecStart=/usr/bin/java -cp ".:lib/*" mwmanger.MwAgent
 Restart=always
 RestartSec=10
 
@@ -209,6 +275,7 @@ WantedBy=multi-user.target
 ```bash
 sudo systemctl enable mwagent
 sudo systemctl start mwagent
+sudo systemctl status mwagent
 ```
 
 ## 실행 흐름
@@ -439,6 +506,35 @@ public class CustomOrder extends Order {
 2. `AgentFuncFactory`에 case 추가
 3. `ExeAgentFunc` Order로 호출
 
+## 테스트
+
+### 단위 테스트 실행
+
+프로젝트는 JUnit 5 기반의 단위 테스트를 포함합니다:
+
+```bash
+# Maven으로 테스트 실행
+mvn test
+
+# Gradle로 테스트 실행
+gradle test
+```
+
+### 테스트 커버리지
+
+- **VO 클래스**: CommandVO, ResultVO
+- **유틸리티**: Common (escape, fillResult, makeOneResultArray)
+- **Order 클래스**: 공통 기능 (replaceParam, getHash)
+- **Factory 클래스**: AgentFuncFactory
+
+자세한 테스트 정보는 [src/test/java/mwmanger/README_TESTS.md](src/test/java/mwmanger/README_TESTS.md) 참조
+
+### 테스트 프레임워크
+
+- JUnit 5 (5.8.2)
+- Mockito (3.12.4)
+- AssertJ (3.21.0)
+
 ## 문의 및 지원
 
 프로젝트 관련 문의사항이나 이슈는 프로젝트 관리자에게 연락하시기 바랍니다.
@@ -447,3 +543,4 @@ public class CustomOrder extends Order {
 
 **Last Updated**: 2025-01-23
 **Version**: 0000.0008.0005
+**Test Framework**: JUnit 5.8.2
