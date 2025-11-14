@@ -1,10 +1,9 @@
 package mwmanger;
 
+import static mwmanger.common.Config.getConfig;
+
 import java.util.logging.Level;
-
 import org.json.simple.JSONObject;
-
-import mwmanger.common.Config;
 import mwmanger.order.OrderCaller;
 
 public class OrderCallerThread extends Thread {
@@ -21,15 +20,14 @@ public class OrderCallerThread extends Thread {
     public void run() {	    	
     	
     	OrderCaller.executeOrder(command_class, command);
-
+    	
     	try {
     		Thread.sleep(500);
     	} catch (InterruptedException e) {
-    	    Config.getInstance().getLogger().log(Level.WARNING, e.getMessage(), e);
+    		getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);
     	}
 
-    	Config.getInstance().getLogger().info(command_class + " Thread exit.");
-
+    	getConfig().getLogger().info(command_class + " Thread exit.");
     }
 
 }

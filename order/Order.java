@@ -1,5 +1,7 @@
 package mwmanger.order;
 
+import static mwmanger.common.Config.getConfig;
+
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.security.MessageDigest;
@@ -9,7 +11,6 @@ import java.util.ArrayList;
 import org.json.simple.JSONObject;
 
 import mwmanger.common.Common;
-import mwmanger.common.Config;
 import mwmanger.kafka.MwProducer;
 import mwmanger.vo.CommandVO;
 import mwmanger.vo.MwResponseVO;
@@ -17,18 +18,32 @@ import mwmanger.vo.ResultVO;
 
 public abstract class Order {
 
-	//private String target_object_aggregation_key = "";
-	// private boolean is_result_string = true;
-
 	public static String KAFKA = "KAFKA";
 	public static String SERVER = "SERVER";
 	public static String SERVER_N_KAFKA = "SERVER_N_KAFKA";
 
-	CommandVO commandVo = new CommandVO();
-	
-	ResultVO resultVo = new ResultVO();
-	
+	CommandVO commandVo = new CommandVO();	
+	ResultVO resultVo = new ResultVO();	
 	ArrayList<ResultVO> resultVos = new ArrayList<ResultVO>();
+
+	public Order(JSONObject command) {
+		convertCommand(command);
+	}
+
+	public abstract int execute();
+
+	public void sendResults() throws IOException{
+
+		if(!resultVo.getResult().equals("")){
+			getConfig().getLogger().fine("resultVo : "+resultVo.toString());
+			sendResult(resultVo);
+		}
+		
+		for(ResultVO rv : resultVos){
+			getConfig().getLogger().fine("resultVo Array : "+rv.toString());
+			sendResult(rv);
+		}
+	}
 
 	protected void convertCommand(JSONObject command) {
 
@@ -43,27 +58,8 @@ public abstract class Order {
 		commandVo.setAdditionalParams(replaceParam(tmp_additional_params));
 		commandVo.setResultReceiver((String) command.get("result_receiver"));
 		commandVo.setTargetObject((String) command.get("target_object"));
-		commandVo.setHostName(Config.getHostName());
+		commandVo.setHostName(getConfig().getHostName());
 
-	}
-
-	public Order(JSONObject command) {
-		convertCommand(command);
-	}
-
-	public abstract int execute();
-
-	public void sendResults() throws IOException{
-
-		if(!resultVo.getResult().equals("")){
-			Config.getLogger().fine("resultVo : "+resultVo.toString());
-			sendResult(resultVo);
-		}
-		
-		for(ResultVO rv : resultVos){
-			Config.getLogger().fine("resultVo Array : "+rv.toString());
-			sendResult(rv);
-		}
 	}
 
 	protected String replaceParam(String text) {
@@ -71,21 +67,20 @@ public abstract class Order {
 		if (text == null || text.isEmpty() || text.length() < 1)
 			return text;
 
-		String ctext = "";
-		String env_val = "";
-		String rtn_val = "";
 		int s = text.indexOf("<<");
 		int e = text.indexOf(">>");
 
-		if (s == -1 || e == -1 || s > e)
+		if (s == -1 || e == -1 || s > e){
 			return text;
+		}			
 
-		env_val = text.substring(s + 2, e);
-		rtn_val = Config.getEnv().get(env_val);
-		System.out.println("Param in order :" + env_val + "=>" + rtn_val);
-		ctext = text.substring(0, s) + rtn_val + text.substring(e + 2);
-		ctext = replaceParam(ctext);
-		return ctext;
+		String env_val = text.substring(s + 2, e);
+		String rtn_val = getConfig().getEnv().get(env_val);
+		
+		getConfig().getLogger().fine("Param in order :" + env_val + "=>" + rtn_val);
+		
+		String ctext = text.substring(0, s) + rtn_val + text.substring(e + 2);
+		return  replaceParam(ctext);
 
 	}
 
@@ -107,7 +102,7 @@ public abstract class Order {
 	protected int sendResult(ResultVO rv) throws IOException {
 
 		int rtn = 0;
-		Config.getLogger().fine("sendResult commandVo : " + commandVo.toString());
+		getConfig().getLogger().fine("sendResult commandVo : " + commandVo.toString());
 		if (commandVo.getResultReceiver().equals(SERVER) || commandVo.getResultReceiver().equals(SERVER_N_KAFKA)) {
 			rtn = send2Server(rv);
 		}
@@ -124,7 +119,7 @@ public abstract class Order {
 
 		String js = getJsonResult(true, rv);
 
-		MwProducer.sendMessage(topic, Config.getAgent_id(), js);
+		MwProducer.sendMessage(topic, getConfig().getAgent_id(), js);
 
 		return 1;
 
@@ -132,28 +127,46 @@ public abstract class Order {
 
 	private int send2Server(ResultVO rv) {
 
-		String url = Config.getServer_url() + "/api/v1/command/result";
+		String path = "/api/v1/command/result";
 		String data = getJsonResult(false, rv);
 		
-		MwResponseVO mwrv = Common.httpPOST(url, Config.getAccess_token(), data);
+		MwResponseVO mwrv = Common.httpPOST(path, getConfig().getAccess_token(), data);
 
 		if (mwrv.getResponse() != null) {
-			Config.getLogger().fine("sendPOST result:" + mwrv.getResponse().get("message").toString());
+			getConfig().getLogger().fine("sendPOST result:" + mwrv.getResponse().get("message").toString());
 		} else {			
-			Config.getLogger().warning("sendPOST Error");			
+			getConfig().getLogger().warning("sendPOST Error");			
 		}
 
 		return 1;
 
 	}
 
+	@SuppressWarnings("unchecked")
 	private String getJsonResult(boolean is4Kafka, ResultVO rv) {
 
+		JSONObject jsonObj = new JSONObject();
+		
+		getConfig().getLogger().info("Agent_id : " + getConfig().getAgent_id());
+		
+		jsonObj.put("agent_id", getConfig().getAgent_id());
+		jsonObj.put("command_id", commandVo.getCommandId());
+		jsonObj.put("repetition_seq", Long.toString(commandVo.getRepetitionSeq()));
+		jsonObj.put("key_value1", rv.getTargetFileName());
+		jsonObj.put("host_id", rv.getHostName());
+		jsonObj.put("is_normal", rv.isOk());
+		jsonObj.put("key_value2", rv.getTargetFilePath());
+		jsonObj.put("result_text", rv.getResult());
+		jsonObj.put("result_hash", rv.getResultHash());
+		jsonObj.put("aggregation_key", rv.getObjectAggregationKey());
+		
+		return jsonObj.toString();
+		/*
 		StringBuilder js = new StringBuilder();
-		System.out.println("Agent_id : " + Config.getAgent_id());
+		System.out.println("Agent_id : " + getConfig().getAgent_id());
 
 		js.append("{");
-		js.append("\"agent_id\":\"" + Config.getAgent_id() + "\",");
+		js.append("\"agent_id\":\"" + getConfig().getAgent_id() + "\",");
 		js.append("\"command_id\":\"" + commandVo.getCommandId() + "\",");
 		js.append("\"repetition_seq\":" + Long.toString(commandVo.getRepetitionSeq()) + ",");
 		js.append("\"key_value1\":\"" + Common.escape(rv.getTargetFileName()) + "\",");
@@ -170,7 +183,7 @@ public abstract class Order {
 		js.append("}");
 
 		return js.toString();
-
+		*/		
 	}
 
 }

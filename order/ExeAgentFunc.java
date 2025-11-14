@@ -1,12 +1,13 @@
 package mwmanger.order;
 
+import static mwmanger.common.Config.getConfig;
+
 import java.util.logging.Level;
 
 import org.json.simple.JSONObject;
 
 import mwmanger.agentfunction.AgentFunc;
 import mwmanger.agentfunction.AgentFuncFactory;
-import mwmanger.common.Config;
 
 public class ExeAgentFunc extends Order {
 
@@ -19,7 +20,7 @@ public class ExeAgentFunc extends Order {
 
 		int rtn = 1;
 		
-		Config.getLogger().info("commandVo : "+commandVo.toString());
+		getConfig().getLogger().info("commandVo : "+commandVo.toString());
 		AgentFunc func = AgentFuncFactory.getAgentFunc(commandVo.getTargetFileName());
 		
 		try{
@@ -27,7 +28,7 @@ public class ExeAgentFunc extends Order {
 			resultVos = func.exeCommand(commandVo);
 			
 		}catch (Exception e) {
-			Config.getLogger().log(Level.SEVERE, e.getMessage(), e);
+			getConfig().getLogger().log(Level.SEVERE, e.getMessage(), e);
     		rtn = -1;
 		}				
 

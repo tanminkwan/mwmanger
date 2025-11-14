@@ -1,5 +1,7 @@
 package mwmanger.order;
 
+import static mwmanger.common.Config.getConfig;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
@@ -11,8 +13,6 @@ import java.security.NoSuchAlgorithmException;
 import java.util.logging.Level;
 
 import org.json.simple.JSONObject;
-
-import mwmanger.common.Config;
 import mwmanger.vo.ResultVO;
 
 
@@ -30,7 +30,7 @@ public abstract class ReadFile extends Order {
 			
 		}catch (Exception e) {
 			e.printStackTrace();
-			Config.getLogger().log(Level.WARNING, e.getMessage(), e);    		
+			getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);    		
 		}
 		return 1;
 	}
@@ -73,21 +73,21 @@ public abstract class ReadFile extends Order {
     			}
     		}
     		
-    		Config.getLogger().fine(result);
+    		getConfig().getLogger().fine(result);
     		in.close();
     		rv.setOk(true);
     		
     	}catch(UnsupportedEncodingException e){
-    		Config.getLogger().log(Level.WARNING, e.getMessage(), e);    		
+    		getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);    		
     		result = "Error:UnsupportedEncodingException";
     	}catch(FileNotFoundException e){
-    		Config.getLogger().log(Level.WARNING, e.getMessage(), e);    		
+    		getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);    		
     		result = "Error:FileNotFoundException";
     	}catch(IOException e){
-    		Config.getLogger().log(Level.WARNING, e.getMessage(), e);    		
+    		getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);    		
     		result = "Error:IOException";
     	}catch(NoSuchAlgorithmException e){
-    		Config.getLogger().log(Level.WARNING, e.getMessage(), e);    		
+    		getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);    		
     		result = "Error:NoSuchAlgorithmException";
     	}
     	

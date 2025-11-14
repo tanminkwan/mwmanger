@@ -14,9 +14,9 @@ import java.util.logging.SimpleFormatter;
 
 public final class Config {
 	
-    private static final Config INSTANCE = new Config();
-
-	private String agent_version = "0000.0006.0005";
+	private static final Config INSTANCE = new Config();
+	
+	private String agent_version = "0000.0008.0005";
 	private String agent_type = "JAVAAGENT";
 	private String hostName = "";
 	private String userName = "";
@@ -35,39 +35,35 @@ public final class Config {
 
 	private Map<String, String> env = Collections.emptyMap();
 
-	private Config() {
-        // Private constructor to prevent instantiation
-    }
-
-    public static Config getInstance() {
-        return INSTANCE;
-    }
-
+	public static Config getConfig(){
+		return INSTANCE;
+	}
+	
 	public String getKafka_broker_address() {
 		return kafka_broker_address;
 	}
 	public void setKafka_broker_address(String kafka_broker_address) {
-		Config.kafka_broker_address = kafka_broker_address;
+		this.kafka_broker_address = kafka_broker_address;
 	}
 
 	public Logger getLogger() {
 		return logger;
 	}
 	public void setLogger(Logger logger) {
-		Config.logger = logger;
+		this.logger = logger;
 	}
 
 	public Map<String, String> getEnv() {
 		return env;
 	}
 	public void setEnv(Map<String, String> env) {
-		Config.env = env;
+		this.env = env;
 	}
 	public String getOs() {
 		return os;
 	}
 	public void setOs(String os) {
-		Config.os = os;
+		this.os = os;
 	}
 
 	public String getAgent_version() {
@@ -81,55 +77,55 @@ public final class Config {
 		return hostName;
 	}
 	public void setHostName(String hostName) {
-		Config.hostName = hostName;
+		this.hostName = hostName;
 	}
 	public String getUserName() {
 		return userName;
 	}
 	public void setUserName(String userName) {
-		Config.userName = userName;
+		this.userName = userName;
 	}
 	public String getServer_url() {
 		return server_url;
 	}
 	public void setServer_url(String server_url) {
-		Config.server_url = server_url;
+		this.server_url = server_url;
 	}
 	public String getGet_command_uri() {
 		return get_command_uri;
 	}
 	public void setGet_command_uri(String get_command_uri) {
-		Config.get_command_uri = get_command_uri;
+		this.get_command_uri = get_command_uri;
 	}
 	public String getPost_agent_uri() {
 		return post_agent_uri;
 	}
 	public void setPost_agent_uri(String post_agent_uri) {
-		Config.post_agent_uri = post_agent_uri;
+		this.post_agent_uri = post_agent_uri;
 	}
 	public String getAgent_id() {
 		return agent_id;
 	}
 	public void setAgent_id(String agent_id) {
-		Config.agent_id = agent_id;
+		this.agent_id = agent_id;
 	}
 	public String getAccess_token() {
 		return access_token;
 	}
 	public void setAccess_token(String access_token) {
-		Config.access_token = access_token;
+		this.access_token = access_token;
 	}
 	public String getRefresh_token() {
 		return refresh_token;
 	}
 	public void setRefresh_token(String refresh_token) {
-		Config.refresh_token = refresh_token;
+		this.refresh_token = refresh_token;
 	}	
 	public long getCommand_check_cycle() {
 		return command_check_cycle;
 	}
 	public void setCommand_check_cycle(long command_check_cycle) {
-		Config.command_check_cycle = command_check_cycle;
+		this.command_check_cycle = command_check_cycle;
 	}
 
     public long setConfig() {
@@ -151,7 +147,7 @@ public final class Config {
 			int command_check_cycle = Integer.parseInt(prop.getProperty("command_check_cycle", "60"));
 			String get_command_uri = prop.getProperty("get_command_uri");
 			String post_agent_uri = prop.getProperty("post_agent_uri");
-			Config.setRefresh_token(prop.getProperty("token"));
+			setRefresh_token(prop.getProperty("token"));
 			host_name_var = prop.getProperty("host_name_var");
 			user_name_var = prop.getProperty("user_name_var");
 			String log_dir = prop.getProperty("log_dir", System.getProperty("user.dir"));

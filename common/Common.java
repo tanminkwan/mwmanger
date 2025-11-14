@@ -38,41 +38,36 @@ public class Common {
 	
 	private static CloseableHttpClient httpClient = null;
 	private static CloseableHttpClient httpsClient = null;
+	private static Config config = Config.getConfig();
+	
+	public static ArrayList<ResultVO> makeOneResultArray(ResultVO rv, CommandVO command){
+		ArrayList<ResultVO> rvs = new ArrayList<ResultVO>();
+		rvs.add(fillResult(rv, command));
+		return rvs;
+	}
 
-    public static ArrayList<ResultVO> makeOneResultArray(ResultVO rv, CommandVO command){
-        fillResult(rv, command);
-        ArrayList<ResultVO> rvs = new ArrayList<ResultVO>();
-        rvs.add(rv);
-        return rvs;
-    }
+	public static ResultVO fillResult(ResultVO rv, CommandVO command){
+		rv.setHostName(command.getHostName());
+		rv.setTargetFileName(command.getTargetFileName());
+		rv.setTargetFilePath(command.getTargetFilePath());
+		return rv;
+	}
 
-    public static ResultVO fillResult(ResultVO rv, CommandVO command){
-        rv.setHostName(command.getHostName());
-        rv.setTargetFileName(command.getTargetFileName());
-        rv.setTargetFilePath(command.getTargetFilePath());
-        return rv;
-    }
-
-    private static CloseableHttpClient getHttpClient(String url){
-        if(httpsClient == null || httpClient == null) {
-            synchronized (Common.class) {
-                if(httpsClient == null || httpClient == null) {
-                    createHttpsClient();
-                }
-            }
-        }
-        
-        if (url.toLowerCase().startsWith("https")) {
-            return httpsClient;
-        } else {
-            return httpClient;
-        }                
-    }
+	private static CloseableHttpClient getHttpClient(String url){
+		
+		if(httpsClient==null || httpClient==null)createHttpsClient();
+		
+		if (url.toLowerCase().startsWith("https")) {
+			return httpsClient;
+		}else{
+			return httpClient;
+		}		    	
+	}
 	
     public static void createHttpsClient() {
     	
     	// 0. TLSv1.2 용 Security Provider 선택
-    	if(Config.getOs().equalsIgnoreCase("AIX")){
+    	if(config.getOs().equalsIgnoreCase("AIX")){
     		Security.addProvider(new BouncyCastleProvider());
     	}
     		
@@ -84,7 +79,7 @@ public class Common {
 						.loadTrustMaterial(null, (certificate, authType) -> true)
 						.build();
 		} catch (KeyManagementException | NoSuchAlgorithmException | KeyStoreException e) {
-        	Config.getLogger().log(Level.SEVERE, e.getMessage(), e);
+			config.getLogger().log(Level.SEVERE, e.getMessage(), e);
 			e.printStackTrace();
 		}
 	    	
@@ -94,7 +89,7 @@ public class Common {
 	    				NoopHostnameVerifier.INSTANCE // 호스트네임 검증 비활성화
 	    			);
 	    	
-	    // 3. CloseableHttpClient 생성: 커스텀 SSL socker factory 사용
+	    // 3. CloseableHttpClient 생성: 커스텀 SSL socket factory 사용
 	    httpsClient = HttpClients.custom()
 	                .setSSLSocketFactory(sslScoketFactory)
 	                .build();
@@ -104,15 +99,17 @@ public class Common {
     	
     }
 
-    public static MwResponseVO httpPOST(String uri, String token, String data) {
+    public static MwResponseVO httpPOST(String path, String token, String data) {
     	
     	MwResponseVO mrvo = new MwResponseVO();
     	
+    	String url = config.getServer_url() + path;
+
         try {
 			
-        	HttpClient httpClient = getHttpClient(uri);
+        	HttpClient httpClient = getHttpClient(url);
 
-			HttpPost request = new HttpPost(uri);
+			HttpPost request = new HttpPost(url);
 			request.addHeader(HttpHeaders.CONTENT_TYPE, "application/json");
 			request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer "+token);
 	        request.setEntity(new StringEntity(data));
@@ -132,7 +129,7 @@ public class Common {
                 try {
                 	jsonObj = (JSONObject) jsonPar.parse(value);
                 }catch(ParseException e){
-                	Config.getLogger().warning("JSON Parsing Error  data : "+value);
+                	config.getLogger().warning("JSON Parsing Error  data : "+value);
                 } 
                 
                 mrvo.setResponse(jsonObj);
@@ -140,10 +137,10 @@ public class Common {
             }
         	
         } catch(IOException e){
-        	Config.getLogger().warning("HTTP execution failed" + " : " + uri);
+        	config.getLogger().warning("HTTP execution failed" + " : " + url);
         	mrvo.setStatusCode(-104);
         }catch(Exception e){
-        	Config.getLogger().log(Level.WARNING, e.getMessage(), e);
+        	config.getLogger().log(Level.WARNING, e.getMessage(), e);
         	mrvo.setStatusCode(-105);
         }
         
@@ -151,15 +148,17 @@ public class Common {
         
     }
     
-    public static MwResponseVO httpGET(String uri, String token) {
+    public static MwResponseVO httpGET(String path, String token) {
     	
     	MwResponseVO mrvo = new MwResponseVO();
     	
+    	String url = config.getServer_url() + path;
+    	
         try {
 			
-        	HttpClient httpClient = getHttpClient(uri);
+        	HttpClient httpClient = getHttpClient(url);
             
-        	HttpGet request = new HttpGet(uri);
+        	HttpGet request = new HttpGet(url);
             request.addHeader(HttpHeaders.CONTENT_TYPE, "application/json");
 			request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer "+token);
 
@@ -178,7 +177,7 @@ public class Common {
                 try {
                 	jsonObj = (JSONObject) jsonPar.parse(value);
                 }catch(ParseException e){
-                	Config.getLogger().warning("JSON Parsing Error  data : "+value);
+                	config.getLogger().warning("JSON Parsing Error  data : "+value);
                 } 
                 
                 mrvo.setResponse(jsonObj);
@@ -186,10 +185,10 @@ public class Common {
             }
         	
         } catch(IOException e){
-        	Config.getLogger().warning("HTTP execution failed" + " : " + uri);
+        	config.getLogger().warning("HTTP execution failed" + " : " + url);
         	mrvo.setStatusCode(-110);
         }catch(Exception e){
-        	Config.getLogger().log(Level.WARNING, e.getMessage(), e);
+        	config.getLogger().log(Level.WARNING, e.getMessage(), e);
         	mrvo.setStatusCode(-111);
         }
         
@@ -217,7 +216,7 @@ public class Common {
             int returnCode = response.getStatusLine().getStatusCode();
             
             mrvo.setStatusCode(returnCode);
-            Config.getLogger().fine("File Download status code  " + returnCode);	
+            config.getLogger().fine("File Download status code  " + returnCode);	
             
             if (returnCode >= 200 && returnCode < 300 && entity != null) {            	
             	
@@ -234,13 +233,13 @@ public class Common {
             }
             
 		}catch(FileNotFoundException e){
-        	Config.getLogger().log(Level.WARNING, e.getMessage(), e);
+			config.getLogger().log(Level.WARNING, e.getMessage(), e);
         	mrvo.setStatusCode(-101);
         } catch(IOException e){
-        	Config.getLogger().log(Level.WARNING, e.getMessage(), e);
+        	config.getLogger().log(Level.WARNING, e.getMessage(), e);
         	mrvo.setStatusCode(-100);
         } catch(Exception e){
-        	Config.getLogger().log(Level.WARNING, e.getMessage(), e);
+        	config.getLogger().log(Level.WARNING, e.getMessage(), e);
         	mrvo.setStatusCode(-102);
         }
         
@@ -252,22 +251,22 @@ public class Common {
 
         int rtn = 0;
         
-		String uri =  Config.getServer_url() + "/api/v1/agent/getRefreshToken/" + Config.getAgent_id();
+		String path = "/api/v1/agent/getRefreshToken/" + config.getAgent_id();
 			
-		Config.getLogger().fine("updateRefreshToken uri : "+uri);
+		config.getLogger().fine("updateRefreshToken path : "+path);
 
-		MwResponseVO mrvo = Common.httpGET(uri, Config.getAccess_token());
+		MwResponseVO mrvo = Common.httpGET(path, config.getAccess_token());
 
         if(mrvo.getStatusCode()!=200){
         	
-        	Config.getLogger().severe("getRefreshToken response error : "+Integer.toString(mrvo.getStatusCode()));
+        	config.getLogger().severe("getRefreshToken response error : "+Integer.toString(mrvo.getStatusCode()));
             rtn = -1;
             
         }else if(mrvo.getResponse() != null) {
             	
             String refresh_token = (String)mrvo.getResponse().get("refresh_token");
-            Config.getLogger().fine("refresh_token :"+refresh_token);
-            Config.setRefresh_token(refresh_token);
+            config.getLogger().fine("refresh_token :"+refresh_token);
+            config.setRefresh_token(refresh_token);
             rtn = 1;
             
         }else{
@@ -285,14 +284,14 @@ public class Common {
 		long rtn = Common.updateRefreshToken();
 	
 		if(rtn<0){
-			Config.getLogger().severe("Failed when getting a Refresh Token.");
+			config.getLogger().severe("Failed when getting a Refresh Token.");
 			return -1;
 		}
 
-		rtn = Config.updateProperty("token", Config.getRefresh_token());
+		rtn = config.updateProperty("token", config.getRefresh_token());
 
 		if(rtn<0){
-			Config.getLogger().severe("Failed when updating Refresh Token propery.");
+			config.getLogger().severe("Failed when updating Refresh Token propery.");
 			return -2;
 		}
 		
@@ -304,17 +303,18 @@ public class Common {
 
         int rtn = 0;
         
-        String uri =  Config.getServer_url() + "/api/v1/security/refresh";
-		Config.getLogger().fine("updateToken uri : "+uri);
-		MwResponseVO mrvo = Common.httpPOST(uri, Config.getRefresh_token(), "");
+        String path =  "/api/v1/security/refresh";
+        config.getLogger().fine("updateToken uri : "+path);
+        
+		MwResponseVO mrvo = Common.httpPOST(path, config.getRefresh_token(), "");
 		
-		Config.getLogger().fine("updateToken response code : "+Integer.toString(mrvo.getStatusCode()));
+		config.getLogger().fine("updateToken response code : "+Integer.toString(mrvo.getStatusCode()));
             
         if (mrvo.getResponse() != null) {
             
         	String access_token = (String)mrvo.getResponse().get("access_token");
-        	Config.setAccess_token(access_token);
-            Config.getLogger().fine("access_token :"+access_token);
+        	config.setAccess_token(access_token);
+        	config.getLogger().fine("access_token :"+access_token);
             rtn = 1;
             
         }else{

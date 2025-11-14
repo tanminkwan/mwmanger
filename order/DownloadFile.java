@@ -1,12 +1,13 @@
 package mwmanger.order;
 
+import static mwmanger.common.Config.getConfig;
+
 import java.io.File;
 import java.util.logging.Level;
 
 import org.json.simple.JSONObject;
 
 import mwmanger.common.Common;
-import mwmanger.common.Config;
 import mwmanger.vo.MwResponseVO;
 import mwmanger.vo.ResultVO;
 
@@ -25,7 +26,7 @@ public class DownloadFile extends Order {
 			resultVo = downloadFile();
 			
 		}catch (Exception e) {
-			Config.getLogger().log(Level.WARNING, e.getMessage(), e);    		
+			getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);    		
 		}	
 
 		return 1;
@@ -33,24 +34,23 @@ public class DownloadFile extends Order {
 
     private ResultVO downloadFile() {
 
-        String url = Config.getServer_url() 
-        		+ "/api/v1/agent/download/" 
-        		+ Config.getAgent_type() 
+        String url = getConfig().getServer_url() 
+        		+ "/api/v1/agent/download/" + getConfig().getAgent_type() 
         		+ "/" + commandVo.getTargetFileName();
         
         String file_location = System.getProperty("user.dir") + File.separator + commandVo.getTargetFilePath();
 
-        MwResponseVO mwrv = Common.httpFileDownload(url, Config.getAccess_token(), file_location);
+        MwResponseVO mwrv = Common.httpFileDownload(url, getConfig().getAccess_token(), file_location);
 
 		ResultVO rv = new ResultVO();
 
 		rv.setOk(false);
 		rv.setTargetFilePath(file_location);
-		rv.setHostName(Config.getHostName());
+		rv.setHostName(getConfig().getHostName());
 		rv.setTargetFileName(commandVo.getTargetFileName());		
 		
 		int rtn_code = mwrv.getStatusCode();
-		Config.getLogger().fine("file download response code :"+Integer.toString(rtn_code));
+		getConfig().getLogger().fine("file download response code :"+Integer.toString(rtn_code));
 
 		if(rtn_code < 200 || rtn_code >= 300){
 			

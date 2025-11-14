@@ -1,5 +1,7 @@
 package mwmanger.kafka;
 
+import static mwmanger.common.Config.getConfig;
+
 import java.time.Duration;
 import java.util.Arrays;
 import java.util.List;
@@ -11,8 +13,6 @@ import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.clients.consumer.ConsumerRecords;
 import org.apache.kafka.clients.consumer.KafkaConsumer;
 import org.apache.kafka.common.serialization.StringDeserializer;
-
-import mwmanger.common.Config;
 
 import org.apache.kafka.common.TopicPartition;
 
@@ -30,7 +30,7 @@ public class MwHealthCheckThread extends Thread {
     public void run() {	    	
     	
     	touchHealthTopic();
-    	Config.getLogger().info("MwHealthCheckThread exit.");
+    	getConfig().getLogger().info("MwHealthCheckThread exit.");
 		
     }
     
@@ -43,7 +43,7 @@ public class MwHealthCheckThread extends Thread {
     	//prop.put(ConsumerConfig.AUTO_COMMIT_INTERVAL_MS_CONFIG, "2000");
     	prop.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());    	
     	prop.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-    	prop.put(ConsumerConfig.GROUP_ID_CONFIG, "g_h_"+Config.getAgent_id());
+    	prop.put(ConsumerConfig.GROUP_ID_CONFIG, "g_h_"+getConfig().getAgent_id());
     	
     	KafkaConsumer<String, String> consumer = new KafkaConsumer<>(prop);
     	
@@ -77,7 +77,7 @@ public class MwHealthCheckThread extends Thread {
     		}while (true);
     		
     	}catch(Exception e){
-    		Config.getLogger().log(Level.SEVERE, e.getMessage(), e);
+    		getConfig().getLogger().log(Level.SEVERE, e.getMessage(), e);
     	}finally{
     		consumer.close();
     	}

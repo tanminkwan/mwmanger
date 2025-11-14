@@ -1,5 +1,7 @@
 package mwmanger.order;
 
+import static mwmanger.common.Config.getConfig;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -9,8 +11,6 @@ import java.io.UnsupportedEncodingException;
 import java.util.logging.Level;
 
 import org.json.simple.JSONObject;
-
-import mwmanger.common.Config;
 import mwmanger.vo.ResultVO;
 
 public class ExeScript extends Order {
@@ -28,7 +28,7 @@ public class ExeScript extends Order {
 
 		}catch (Exception e) {
 			e.printStackTrace();
-			Config.getLogger().log(Level.SEVERE, e.getMessage(), e);    		
+			getConfig().getLogger().log(Level.SEVERE, e.getMessage(), e);    		
 		}
 		return 1;
 	}
@@ -67,22 +67,22 @@ public class ExeScript extends Order {
     		
     		result = sb.toString();
         	rv.setOk(true);
-    		Config.getLogger().info("ExeScript result : "+result);
+        	getConfig().getLogger().info("ExeScript result : "+result);
     		in.close();
     		
     	}catch(UnsupportedEncodingException e){
     		
-    		Config.getLogger().log(Level.WARNING, e.getMessage(), e);    		
+    		getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);    		
     		result = "Error:UnsupportedEncodingException";
     		
     	}catch(FileNotFoundException e){
     		
-    		Config.getLogger().log(Level.WARNING, e.getMessage(), e);    		
+    		getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);    		
     		result = "Error:FileNotFoundException " + currentPath + commandVo.getTargetFileName();
     		
     	}catch(IOException e){
     		
-    		Config.getLogger().log(Level.WARNING, e.getMessage(), e);    		
+    		getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);    		
     		result = "Error:IOException";
     		
     	}

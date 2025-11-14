@@ -1,26 +1,15 @@
 package mwmanger.agentfunction;
 
-import org.bouncycastle.jce.provider.BouncyCastleProvider;
-import java.io.IOException;
-import java.net.ConnectException;
 import java.net.InetSocketAddress;
-import java.net.SocketTimeoutException;
-import java.net.URL;
-import java.net.UnknownHostException;
+import java.security.Provider;
 import java.security.Security;
 import java.security.cert.Certificate;
-import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.Collection;
-import java.util.Date;
 import java.util.List;
 import java.util.logging.Level;
 
-import javax.net.ssl.HostnameVerifier;
-import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLParameters;
 import javax.net.ssl.SSLSession;
@@ -29,10 +18,13 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 
+import org.json.simple.JSONArray;
+import org.json.simple.JSONObject;
+
 import mwmanger.common.Common;
-import mwmanger.common.Config;
 import mwmanger.vo.CommandVO;
 import mwmanger.vo.ResultVO;
+import static mwmanger.common.Config.getConfig;
 
 public class SSLCertiFunc implements AgentFunc {
 
@@ -58,11 +50,11 @@ public class SSLCertiFunc implements AgentFunc {
 	
 	}
 	
+	@SuppressWarnings("unchecked")	
 	public ResultVO printValidCerts(String domain, X509Certificate[] certs) {
 		
-		ResultVO rv = new ResultVO();
-		rv.setOk(false);
 
+        /*
     	StringBuilder json = new StringBuilder();
         json.append("{\"domain\":\"" + domain + "\",\"certs\":[");
 
@@ -83,7 +75,34 @@ public class SSLCertiFunc implements AgentFunc {
 		}
     
 		json.append("]}");
-		rv.setResult(json.toString());
+		*/
+        
+		JSONObject resultJson = new JSONObject();
+		resultJson.put("domain", domain);
+		
+		JSONArray certsArray = new JSONArray();
+		
+		int i = 0;
+		for(X509Certificate c:certs){
+			
+			i++;
+			JSONObject certObj = new JSONObject();
+			certObj.put("index", Integer.toString(i));
+			certObj.put("notafter", c.getNotAfter().toString());
+			certObj.put("notbefore", c.getNotBefore().toString());
+			certObj.put("serial", String.format("%032X", c.getSerialNumber()));
+			certObj.put("issuer", c.getIssuerDN().getName());
+			certObj.put("subject", c.getSubjectDN().getName());
+			
+			certsArray.add(certObj);
+			
+		}
+		
+		resultJson.put("certs", certsArray);
+		
+		ResultVO rv = new ResultVO();
+
+		rv.setResult(resultJson.toJSONString());
 		rv.setOk(true);
 
         return rv;
@@ -109,22 +128,67 @@ public class SSLCertiFunc implements AgentFunc {
 		return new String[]{domain, port};
 	}
 	
+	// AIX java1.8 u144 의 기본 security 가 TLSv1.2 를 지원하지 않아서 외부 Security Provider 를 추가함
+	private void addSecurityProvider(){
+		
+		if(getConfig().getOs().equals("AIX")){
+			
+			try{
+				
+				Class<?> bcClazz = Class.forName("org.bouncycastle.jce.provider.BouncyCastleProvider");
+				Provider bcProvider = (Provider) bcClazz.getDeclaredConstructor().newInstance();
+				Security.addProvider(bcProvider);
+				
+			}catch(ClassNotFoundException e){
+				getConfig().getLogger().log(Level.SEVERE, "ClassNotFoundException : BouncyCastleProvider", e);
+			}catch(Exception e){
+				e.printStackTrace();
+				getConfig().getLogger().log(Level.SEVERE, e.getMessage(), e);
+			}
+			
+		}
+		
+	}
+	
 	public X509Certificate[] checkSSLCertificate(String domain, String ip, int port) {
 		
 		List<X509Certificate> validCerts = new ArrayList<>();
 		
 		try{
 			
-			Security.addProvider(new BouncyCastleProvider());
+			addSecurityProvider();
 			
+			// added 2025.11.07
+			TrustManager[] trustAllCerts = new TrustManager[] {
+					new X509TrustManager(){
+						public X509Certificate[] getAcceptedIssuers(){
+							return null;
+						}
+						public void checkClientTrusted(X509Certificate[] certs, String authType){}
+						public void checkServerTrusted(X509Certificate[] certs, String authType){}
+					}
+			};
+
 			SSLContext context = SSLContext.getInstance("TLSv1.2");
-			context.init(null, null, null);
+			// commented 2025.11.07 
+			//context.init(null, null, null);
+			
+			// added 2025.11.07
+			context.init(null, trustAllCerts, new java.security.SecureRandom());
+
 			SSLSocketFactory factory = context.getSocketFactory();
 			
 			try(SSLSocket socket = (SSLSocket) factory.createSocket()){
 				
 				socket.connect(new InetSocketAddress(ip, port));
 				SSLParameters sslParams = socket.getSSLParameters();
+				
+				// 1) SNIHostName(domain) 설정
+				sslParams.setServerNames(
+					java.util.Collections.singletonList(
+						new javax.net.ssl.SNIHostName(domain)
+					)
+				);
 				//sslParams.setEndpointIdentificationAlgorithm("HTTPS");
 				socket.setSSLParameters(sslParams);
 				socket.startHandshake();
@@ -147,7 +211,7 @@ public class SSLCertiFunc implements AgentFunc {
 			
 		} catch (Exception e){
 			e.printStackTrace();
-			System.out.println("Failed to check SSL certificate: " + e.getMessage());
+			getConfig().getLogger().log(Level.SEVERE, "Failed to check SSL certificate: " + e.getMessage(), e);
 			return new X509Certificate[0];
 		}
 		
@@ -179,6 +243,7 @@ public class SSLCertiFunc implements AgentFunc {
 			return matchesDomain(cn, domain);
         } catch (Exception e) {
             e.printStackTrace();
+			getConfig().getLogger().log(Level.SEVERE, "isCertificateValidForDomain: " + e.getMessage(), e);
         }
         return false;
     }

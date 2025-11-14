@@ -1,10 +1,11 @@
 package mwmanger;
 
+import static mwmanger.common.Config.getConfig;
+
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 
 import mwmanger.common.Common;
-import mwmanger.common.Config;
 import mwmanger.kafka.MwConsumerThread;
 import mwmanger.kafka.MwHealthCheckThread;
 import mwmanger.kafka.MwProducer;
@@ -16,7 +17,7 @@ public class FirstWork {
 		for(Object c : commands){
 			
 			JSONObject command = (JSONObject)c;
-			Config.getLogger().info(command.toJSONString());
+			getConfig().getLogger().info(command.toJSONString());
 			
 			String command_class  = (String)command.get("command_class");
 			
@@ -26,18 +27,18 @@ public class FirstWork {
 				
 				if(kafka_broker_address != null && !kafka_broker_address.isEmpty()){
 		    		   
-					Config.getLogger().info("Kafka broker : "+ kafka_broker_address);
-		            Config.setKafka_broker_address(kafka_broker_address);
+					getConfig().getLogger().info("Kafka broker : "+ kafka_broker_address);
+					getConfig().setKafka_broker_address(kafka_broker_address);
 		        	   
 		            //Command consuming
-		            MwConsumerThread consumerThread = new MwConsumerThread(Config.getKafka_broker_address(), "t_"+Config.getAgent_id());
+		            MwConsumerThread consumerThread = new MwConsumerThread(getConfig().getKafka_broker_address(), "t_"+getConfig().getAgent_id());
 
 		            consumerThread.setDaemon(true);
 		            consumerThread.start();
 		            consumerThread.setName("MwConsumer");
 		   	
 		            //Health checking
-		            MwHealthCheckThread healthcheckThread = new MwHealthCheckThread(Config.getKafka_broker_address(), "t_agent_health");
+		            MwHealthCheckThread healthcheckThread = new MwHealthCheckThread(getConfig().getKafka_broker_address(), "t_agent_health");
 
 		            healthcheckThread.setDaemon(true);
 		            healthcheckThread.start();

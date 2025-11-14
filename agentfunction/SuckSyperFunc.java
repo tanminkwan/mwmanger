@@ -13,7 +13,7 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 import mwmanger.common.Common;
-import mwmanger.common.Config;
+import static mwmanger.common.Config.getConfig;
 import mwmanger.vo.CommandVO;
 import mwmanger.vo.ResultVO;
 
@@ -44,7 +44,7 @@ public class SuckSyperFunc implements AgentFunc {
     		db_password = (String)jsonObj.get("db_password");
     		
     	}catch(Exception e){
-    		Config.getLogger().log(Level.SEVERE, e.getMessage(), e);
+    		getConfig().getLogger().log(Level.SEVERE, e.getMessage(), e);
     		rv.setResult("params parsing error");
 		}
     	
@@ -53,10 +53,10 @@ public class SuckSyperFunc implements AgentFunc {
     		conn = DriverManager.getConnection(db_uri, db_username, db_password);
     		stmt = conn.createStatement();
     	}catch(ClassNotFoundException e){
-    		Config.getLogger().log(Level.SEVERE, e.getMessage(), e);    		
+    		getConfig().getLogger().log(Level.SEVERE, e.getMessage(), e);    		
     		rv.setResult("Driver class not found");
     	}catch(SQLException e){
-    		Config.getLogger().log(Level.SEVERE, e.getMessage(), e);    		
+    		getConfig().getLogger().log(Level.SEVERE, e.getMessage(), e);    		
     		rv.setResult("SQLException occured 1");
     	}
 
@@ -112,7 +112,7 @@ public class SuckSyperFunc implements AgentFunc {
         	rs.close();
         	
     	}catch(SQLException e){
-    		Config.getLogger().log(Level.WARNING, e.getMessage(), e);
+    		getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);
     		return null;
     	}
     	

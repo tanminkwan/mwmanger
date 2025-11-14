@@ -16,7 +16,7 @@ import org.json.simple.parser.JSONParser;
 import org.json.simple.parser.ParseException;
 
 import mwmanger.OrderCallerThread;
-import mwmanger.common.Config;
+import static mwmanger.common.Config.getConfig;
 
 public class MwConsumerThread extends Thread {
 	
@@ -34,7 +34,7 @@ public class MwConsumerThread extends Thread {
     public void run() {	    	
     	
     	executeOrderFromKafka();
-    	Config.getLogger().info("MwConsumerThread exit.");
+    	getConfig().getLogger().info("MwConsumerThread exit.");
 		
     }
     
@@ -50,7 +50,7 @@ public class MwConsumerThread extends Thread {
     	prop.put(ConsumerConfig.ENABLE_AUTO_COMMIT_CONFIG, "true");
     	prop.put(ConsumerConfig.KEY_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());    	
     	prop.put(ConsumerConfig.VALUE_DESERIALIZER_CLASS_CONFIG, StringDeserializer.class.getName());
-    	prop.put(ConsumerConfig.GROUP_ID_CONFIG, "g_"+Config.getAgent_id());
+    	prop.put(ConsumerConfig.GROUP_ID_CONFIG, "g_"+getConfig().getAgent_id());
     	
     	KafkaConsumer<String, String> consumer = new KafkaConsumer<>(prop);
     	consumer.subscribe(Collections.singletonList(topic));
@@ -76,16 +76,16 @@ public class MwConsumerThread extends Thread {
  	    		    thread.setDaemon(true);
  	    		    thread.start();	    		   
  	    		   
-    				Config.getLogger().info("Order called by Kafka :"+ Long.toString(rec.offset()) + " key : "+ rec.key() + "_" + message);
+ 	    		   getConfig().getLogger().info("Order called by Kafka :"+ Long.toString(rec.offset()) + " key : "+ rec.key() + "_" + message);
     				
     			}
     			
     		}while (!StringUtils.equals(message, FIN_MESSAGE) || stopRequested==true );
     		
     	}catch(ParseException e){
-    		Config.getLogger().log(Level.SEVERE, e.getMessage(), e);
+    		getConfig().getLogger().log(Level.SEVERE, e.getMessage(), e);
     	}catch(Exception e){
-    		Config.getLogger().log(Level.SEVERE, e.getMessage(), e);
+    		getConfig().getLogger().log(Level.SEVERE, e.getMessage(), e);
     	}finally{
     		consumer.close();
     	}

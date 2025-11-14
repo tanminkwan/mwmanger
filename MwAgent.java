@@ -1,7 +1,7 @@
 package mwmanger;
 
-import mwmanger.common.Common;
-import mwmanger.common.Config;
+import static mwmanger.common.Config.getConfig;
+
 import mwmanger.vo.RawCommandsVO;
 
 public class MwAgent {
@@ -10,8 +10,7 @@ public class MwAgent {
 	
     public static void main(String[] args) {
 
-		Config config = Config.getInstance();
-    	config.setConfig();
+    	getConfig().setConfig();
     	
     	Runtime.getRuntime().addShutdownHook(new ShutdownThread());
 		
@@ -25,7 +24,7 @@ public class MwAgent {
 		
 		if(rtn<0){
 			
-			config.getLogger().info("First commands execution failed.");
+			getConfig().getLogger().info("First commands execution failed.");
 	        System.exit(0);
 	        
 		}
@@ -35,7 +34,7 @@ public class MwAgent {
 		
 		if(rtn<0){
 			
-			Config.getLogger().info("Commands execution failed.");
+			getConfig().getLogger().info("Commands execution failed.");
 	        System.exit(0);
 	        
 		}

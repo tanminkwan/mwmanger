@@ -13,9 +13,9 @@ import java.util.ArrayList;
 import java.util.logging.Level;
 
 import mwmanger.common.Common;
-import mwmanger.common.Config;
 import mwmanger.vo.CommandVO;
 import mwmanger.vo.ResultVO;
+import static mwmanger.common.Config.getConfig;
 
 public class SSLCertiFileFunc  implements AgentFunc {
 
@@ -91,11 +91,11 @@ public class SSLCertiFileFunc  implements AgentFunc {
 	        rv.setOk(true);
 		}
         catch (CertificateException e){
-        	Config.getLogger().log(Level.WARNING, e.getMessage(), e);
+        	getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);
         	rv.setResult("CertificateException occured");
         }
         catch (FileNotFoundException e){
-        	Config.getLogger().log(Level.WARNING, e.getMessage(), e);
+        	getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);
         	rv.setResult("FileNotFoundException occured");
         }        
         finally {

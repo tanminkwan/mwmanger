@@ -1,13 +1,10 @@
 package mwmanger.order;
 
+import static mwmanger.common.Config.getConfig;
+
 import java.util.logging.Level;
-
-//import java.util.logging.Level;
-
 import org.json.simple.JSONObject;
-
 import mwmanger.common.Common;
-import mwmanger.common.Config;
 
 public class GetRefreshToken extends Order {
 
@@ -28,10 +25,10 @@ public class GetRefreshToken extends Order {
 			
 			resultVo.setOk(true);
 			resultVo.setHostName(commandVo.getHostName());
-			resultVo.setResult(Config.getRefresh_token());
+			resultVo.setResult(getConfig().getRefresh_token());
 			
 		}catch (Exception e) {
-			Config.getLogger().log(Level.SEVERE, e.getMessage(), e);
+			getConfig().getLogger().log(Level.SEVERE, e.getMessage(), e);
     		return -3;
 		}
 		return 1;

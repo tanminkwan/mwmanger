@@ -1,5 +1,7 @@
 package mwmanger.order;
 
+import static mwmanger.common.Config.getConfig;
+
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.IOException;
@@ -7,8 +9,6 @@ import java.io.UnsupportedEncodingException;
 import java.util.logging.Level;
 
 import org.json.simple.JSONObject;
-
-import mwmanger.common.Config;
 import mwmanger.vo.ResultVO;
 
 
@@ -26,7 +26,7 @@ public class ExeShell extends Order {
 			resultVo = runShell();
 			
 		}catch (Exception e) {
-			Config.getLogger().log(Level.WARNING, e.getMessage(), e);    		
+			getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);    		
 		}
 		return 1;
 	}
@@ -49,19 +49,19 @@ public class ExeShell extends Order {
 		
     	command_t = currentPath + commandVo.getTargetFileName();
     	
-    	if (Config.getOs().equals("WIN")){
+    	if (getConfig().getOs().equals("WIN")){
     		command_s = "cmd /c start";
-    	}else if (Config.getOs().equals("LINUX")){
+    	}else if (getConfig().getOs().equals("LINUX")){
     		command_s = "bash -c command";
-    	}else if (Config.getOs().equals("AIX")){
+    	}else if (getConfig().getOs().equals("AIX")){
     		command_s = "ksh -c command";
-    	}else if (Config.getOs().equals("HPUX")){
+    	}else if (getConfig().getOs().equals("HPUX")){
     		command_s = "ksh -c command";
     	}
     	
     	String[] command = null;
     	
-    	if (Config.getOs().equals("WIN")){
+    	if (getConfig().getOs().equals("WIN")){
         	
     		command_s += " "+command_t;
     		
@@ -84,7 +84,7 @@ public class ExeShell extends Order {
     	}
     	
     	for(String s : command){
-    		Config.getLogger().fine("commandline: "+s);
+    		getConfig().getLogger().fine("commandline: "+s);
     		System.out.println("commandline: "+s);
     	}
     	
@@ -96,13 +96,13 @@ public class ExeShell extends Order {
     		rv.setOk(true);
     		
     	}catch(UnsupportedEncodingException e){
-    		Config.getLogger().log(Level.WARNING, e.getMessage(), e);    		
+    		getConfig().getLogger().log(Level.SEVERE, e.getMessage(), e);    		
     		result = "Error:UnsupportedEncodingException";
     	}catch(FileNotFoundException e){
-    		Config.getLogger().log(Level.WARNING, e.getMessage(), e);    		
+    		getConfig().getLogger().log(Level.SEVERE, e.getMessage(), e);    		
     		result = "Error:FileNotFoundException";
     	}catch(IOException e){
-    		Config.getLogger().log(Level.WARNING, e.getMessage(), e);    		
+    		getConfig().getLogger().log(Level.SEVERE, e.getMessage(), e);    		
     		result = "Error:IOException";
     	}
     	

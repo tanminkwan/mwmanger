@@ -1,11 +1,11 @@
 package mwmanger.order;
 
+import static mwmanger.common.Config.getConfig;
+
 import java.lang.reflect.Constructor;
 import java.util.logging.Level;
 
 import org.json.simple.JSONObject;
-
-import mwmanger.common.Config;
 
 public final class OrderCaller {
 	
@@ -13,7 +13,7 @@ public final class OrderCaller {
     	
     	try {
 
-    		Config.getLogger().info("orderedClass : "+orderedClass);
+    		getConfig().getLogger().info("orderedClass : "+orderedClass);
     		//- Order order = (Order) Class.forName(orderedClass).getDeclaredConstructor().newInstance(command);
     		Class<?> order = Class.forName(orderedClass);
     		Constructor<?> orderConstructor = order.getConstructor(JSONObject.class);
@@ -28,16 +28,16 @@ public final class OrderCaller {
     		if(rtn>0){
     			orderObj.sendResults();
     		}else{
-    			Config.getLogger().warning("executeOrder failed. orderedClass : "+orderedClass);
+    			getConfig().getLogger().warning("executeOrder failed. orderedClass : "+orderedClass);
     		}
     		
-        	Config.getLogger().info("finished OrderCaller.");
+    		getConfig().getLogger().info("finished OrderCaller.");
         	
     	}catch (ClassNotFoundException e) {
-    		Config.getLogger().log(Level.WARNING, e.getMessage(), e);
+    		getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);
     		return -2;
     	}catch (Exception e) {
-    		Config.getLogger().log(Level.WARNING, e.getMessage(), e);    		
+    		getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);    		
     		return -3;
     	}    	
     	
