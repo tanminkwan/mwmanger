@@ -37,12 +37,12 @@ MwManger는 분산 환경의 서버 관리를 자동화하기 위한 에이전�
 
 | 라이브러리 | 버전 | 용도 |
 |-----------|------|------|
-| Apache HttpClient | 4.5.14 | HTTP/HTTPS 통신 |
-| Apache Kafka Client | 2.8.2 | Kafka 메시징 |
+| Apache HttpClient | 4.5.13 | HTTP/HTTPS 통신 |
+| Apache Kafka Client | 3.1.0 | Kafka 메시징 |
 | BouncyCastle | 1.70 | TLS 1.2 지원 (AIX) |
 | JSON Simple | 1.1.1 | JSON 처리 |
-| Apache Commons Codec | 1.15 | 인코딩 유틸리티 |
-| SLF4J | 1.7.36 | 로깅 (Kafka 의존성) |
+| Apache Commons Codec | 1.11 | 인코딩 유틸리티 |
+| SLF4J | 1.7.30 | 로깅 (Kafka 의존성) |
 
 자세한 의존성 정보는 [DEPENDENCIES.md](DEPENDENCIES.md) 참조
 

@@ -18,11 +18,11 @@ MwManger Agent는 JDK 1.8 (Java 8) 이상에서 실행 가능하도록 설계되
 <dependency>
     <groupId>org.apache.httpcomponents</groupId>
     <artifactId>httpclient</artifactId>
-    <version>4.5.14</version>
+    <version>4.5.13</version>
 </dependency>
 ```
 
-- **버전**: 4.5.14 (JDK 1.8 호환)
+- **버전**: 4.5.13 (JDK 1.8 호환)
 - **사용 위치**:
   - `Common.java` - HTTP GET/POST 요청
   - `Common.java` - 파일 다운로드
@@ -39,11 +39,11 @@ MwManger Agent는 JDK 1.8 (Java 8) 이상에서 실행 가능하도록 설계되
 <dependency>
     <groupId>org.apache.kafka</groupId>
     <artifactId>kafka-clients</artifactId>
-    <version>2.8.2</version>
+    <version>3.1.0</version>
 </dependency>
 ```
 
-- **버전**: 2.8.2 (JDK 1.8 호환, 최신 안정 버전)
+- **버전**: 3.1.0 (JDK 1.8 호환)
 - **사용 위치**:
   - `MwConsumerThread.java` - 명령 수신
   - `MwProducer.java` - 결과 전송
@@ -53,7 +53,7 @@ MwManger Agent는 JDK 1.8 (Java 8) 이상에서 실행 가능하도록 설계되
   - 자동 커밋
   - 비동기 메시지 전송
 
-**참고**: Kafka 3.0+ 버전도 JDK 1.8과 호환되나, 3.1부터는 JDK 11 이상 필요
+**참고**: Kafka 3.1.0은 JDK 1.8과 호환됩니다 (공식 지원 버전)
 
 ### 3. BouncyCastle (암호화 및 TLS 지원)
 
@@ -109,11 +109,11 @@ MwManger Agent는 JDK 1.8 (Java 8) 이상에서 실행 가능하도록 설계되
 <dependency>
     <groupId>commons-codec</groupId>
     <artifactId>commons-codec</artifactId>
-    <version>1.15</version>
+    <version>1.11</version>
 </dependency>
 ```
 
-- **버전**: 1.15 (JDK 1.8 호환)
+- **버전**: 1.11 (JDK 1.8 호환)
 - **사용 위치**:
   - `MwConsumerThread.java` - 문자열 비교 (StringUtils)
 - **주요 기능**:
@@ -129,18 +129,18 @@ MwManger Agent는 JDK 1.8 (Java 8) 이상에서 실행 가능하도록 설계되
 <dependency>
     <groupId>org.slf4j</groupId>
     <artifactId>slf4j-api</artifactId>
-    <version>1.7.36</version>
+    <version>1.7.30</version>
 </dependency>
 
 <!-- SLF4J Simple Implementation -->
 <dependency>
     <groupId>org.slf4j</groupId>
     <artifactId>slf4j-simple</artifactId>
-    <version>1.7.36</version>
+    <version>1.7.30</version>
 </dependency>
 ```
 
-- **버전**: 1.7.36 (JDK 1.8 호환)
+- **버전**: 1.7.30 (JDK 1.8 호환, Kafka 3.1.0 호환)
 - **사용 위치**: Kafka 클라이언트 내부
 - **참고**: 애플리케이션은 `java.util.logging`을 사용하지만, Kafka는 SLF4J 필요
 
@@ -150,13 +150,13 @@ MwManger Agent는 JDK 1.8 (Java 8) 이상에서 실행 가능하도록 설계되
 
 | 라이브러리 | GroupId | ArtifactId | 버전 | JDK 1.8 호환 | 필수 여부 |
 |-----------|---------|------------|------|-------------|----------|
-| Apache HttpClient | org.apache.httpcomponents | httpclient | 4.5.14 | ✓ | 필수 |
-| Apache Kafka Client | org.apache.kafka | kafka-clients | 2.8.2 | ✓ | 필수 |
+| Apache HttpClient | org.apache.httpcomponents | httpclient | 4.5.13 | ✓ | 필수 |
+| Apache Kafka Client | org.apache.kafka | kafka-clients | 3.1.0 | ✓ | 필수 |
 | BouncyCastle | org.bouncycastle | bcprov-jdk15on | 1.70 | ✓ | AIX 필수 |
 | JSON Simple | com.googlecode.json-simple | json-simple | 1.1.1 | ✓ | 필수 |
-| Apache Commons Codec | commons-codec | commons-codec | 1.15 | ✓ | 필수 |
-| SLF4J API | org.slf4j | slf4j-api | 1.7.36 | ✓ | 필수 |
-| SLF4J Simple | org.slf4j | slf4j-simple | 1.7.36 | ✓ | 필수 |
+| Apache Commons Codec | commons-codec | commons-codec | 1.11 | ✓ | 필수 |
+| SLF4J API | org.slf4j | slf4j-api | 1.7.30 | ✓ | 필수 |
+| SLF4J Simple | org.slf4j | slf4j-simple | 1.7.30 | ✓ | 필수 |
 
 ### 테스트 의존성
 

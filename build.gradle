@@ -14,10 +14,10 @@ repositories {
 
 dependencies {
     // Apache HttpClient for HTTP/HTTPS communication
-    implementation 'org.apache.httpcomponents:httpclient:4.5.14'
+    implementation 'org.apache.httpcomponents:httpclient:4.5.13'
 
     // Apache Kafka Client for Kafka communication
-    implementation 'org.apache.kafka:kafka-clients:2.8.2'
+    implementation 'org.apache.kafka:kafka-clients:3.1.0'
 
     // BouncyCastle for TLS 1.2 support (especially for AIX)
     implementation 'org.bouncycastle:bcprov-jdk15on:1.70'
@@ -26,13 +26,13 @@ dependencies {
     implementation 'com.googlecode.json-simple:json-simple:1.1.1'
 
     // Apache Commons Codec for encoding utilities
-    implementation 'commons-codec:commons-codec:1.15'
+    implementation 'commons-codec:commons-codec:1.11'
 
     // SLF4J API (required by Kafka client)
-    implementation 'org.slf4j:slf4j-api:1.7.36'
+    implementation 'org.slf4j:slf4j-api:1.7.30'
 
     // SLF4J Simple implementation for logging
-    implementation 'org.slf4j:slf4j-simple:1.7.36'
+    implementation 'org.slf4j:slf4j-simple:1.7.30'
 
     // JUnit 5 for unit testing
     testImplementation 'org.junit.jupiter:junit-jupiter:5.8.2'

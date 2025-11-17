@@ -17,11 +17,12 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <maven.compiler.source>1.8</maven.compiler.source>
         <maven.compiler.target>1.8</maven.compiler.target>
-        <httpclient.version>4.5.14</httpclient.version>
-        <kafka.version>2.8.2</kafka.version>
+        <httpclient.version>4.5.13</httpclient.version>
+        <kafka.version>3.1.0</kafka.version>
         <bouncycastle.version>1.70</bouncycastle.version>
         <json-simple.version>1.1.1</json-simple.version>
-        <commons-codec.version>1.15</commons-codec.version>
+        <commons-codec.version>1.11</commons-codec.version>
+        <slf4j.version>1.7.30</slf4j.version>
         <junit.version>5.8.2</junit.version>
         <mockito.version>3.12.4</mockito.version>
     </properties>
@@ -66,14 +67,14 @@
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-api</artifactId>
-            <version>1.7.36</version>
+            <version>${slf4j.version}</version>
         </dependency>
 
         <!-- SLF4J Simple implementation for logging -->
         <dependency>
             <groupId>org.slf4j</groupId>
             <artifactId>slf4j-simple</artifactId>
-            <version>1.7.36</version>
+            <version>${slf4j.version}</version>
         </dependency>
 
         <!-- JUnit 5 for unit testing -->
