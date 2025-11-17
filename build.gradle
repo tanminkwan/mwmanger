@@ -49,18 +49,9 @@ application {
     mainClass = 'mwmanger.MwAgent'
 }
 
-// Source directory configuration
-sourceSets {
-    main {
-        java {
-            srcDirs = ['.']
-            exclude 'build/**'
-            exclude '.gradle/**'
-            exclude '.git/**'
-            exclude '.claude/**'
-        }
-    }
-}
+// Source directory configuration (Gradle standard: src/main/java)
+// Default configuration is used - src/main/java
+// No need to override sourceSets unless customization is required
 
 // Task to create fat JAR with all dependencies
 task fatJar(type: Jar) {

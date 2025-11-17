@@ -110,7 +110,8 @@
     </dependencies>
 
     <build>
-        <sourceDirectory>.</sourceDirectory>
+        <!-- Maven standard: src/main/java (default, no need to specify) -->
+        <!-- <sourceDirectory>src/main/java</sourceDirectory> -->
         <testSourceDirectory>src/test/java</testSourceDirectory>
         <plugins>
             <!-- Maven Compiler Plugin -->

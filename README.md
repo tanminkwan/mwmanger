@@ -127,52 +127,90 @@ build/libs/mwmanger-all-0000.0008.0005.jar
 
 ## 프로젝트 구조
 
+표준 Maven/Gradle 프로젝트 구조를 따릅니다:
+
 ```
 mwmanger/
-├── MwAgent.java                 # 메인 진입점
-├── PreWork.java                 # 에이전트 등록 및 승인 처리
-├── FirstWork.java               # Kafka 연결 등 초기화
-├── MainWork.java                # 메인 루프 (명령 수신 및 처리)
-├── OrderCallerThread.java       # 명령 실행 스레드
-├── ShutdownThread.java          # 종료 처리
+├── src/
+│   ├── main/
+│   │   └── java/
+│   │       └── mwmanger/
+│   │           ├── MwAgent.java                 # 메인 진입점
+│   │           ├── PreWork.java                 # 에이전트 등록 및 승인 처리
+│   │           ├── FirstWork.java               # Kafka 연결 등 초기화
+│   │           ├── MainWork.java                # 메인 루프 (명령 수신 및 처리)
+│   │           ├── OrderCallerThread.java       # 명령 실행 스레드
+│   │           ├── ShutdownThread.java          # 종료 처리
+│   │           │
+│   │           ├── common/
+│   │           │   ├── Config.java              # 설정 관리 (Singleton)
+│   │           │   └── Common.java              # HTTP 통신 유틸리티
+│   │           │
+│   │           ├── order/                       # 명령 실행 모듈
+│   │           │   ├── Order.java               # 추상 Order 클래스
+│   │           │   ├── OrderCaller.java         # Order 동적 로딩 및 실행
+│   │           │   ├── ExeShell.java            # 쉘 스크립트 실행
+│   │           │   ├── ExeScript.java           # 스크립트 실행
+│   │           │   ├── ExeText.java             # 텍스트 실행
+│   │           │   ├── ExeAgentFunc.java        # Agent Function 실행
+│   │           │   ├── ReadFile.java            # 파일 읽기 (추상)
+│   │           │   ├── ReadPlainFile.java       # 일반 파일 읽기
+│   │           │   ├── ReadFullPathFile.java   # 전체 경로 파일 읽기
+│   │           │   ├── DownloadFile.java        # 파일 다운로드
+│   │           │   └── GetRefreshToken.java     # Refresh Token 갱신
+│   │           │
+│   │           ├── agentfunction/               # 에이전트 기능 모듈
+│   │           │   ├── AgentFunc.java           # AgentFunc 인터페이스
+│   │           │   ├── AgentFuncFactory.java    # Factory 패턴
+│   │           │   ├── HelloFunc.java           # Hello World 예제
+│   │           │   ├── JmxStatFunc.java         # JMX 통계 수집
+│   │           │   ├── SSLCertiFunc.java        # SSL 인증서 정보
+│   │           │   ├── SSLCertiFileFunc.java    # SSL 인증서 파일
+│   │           │   ├── DownloadNUnzipFunc.java  # 파일 다운로드 및 압축해제
+│   │           │   └── SuckSyperFunc.java       # Syper 데이터 수집
+│   │           │
+│   │           ├── kafka/
+│   │           │   ├── MwConsumerThread.java    # Kafka Consumer (명령 수신)
+│   │           │   ├── MwProducer.java          # Kafka Producer (결과 전송)
+│   │           │   └── MwHealthCheckThread.java # Kafka 상태 모니터링
+│   │           │
+│   │           └── vo/
+│   │               ├── CommandVO.java           # 명령 VO
+│   │               ├── ResultVO.java            # 결과 VO
+│   │               ├── RawCommandsVO.java       # 원시 명령 VO
+│   │               └── MwResponseVO.java        # HTTP 응답 VO
+│   │
+│   └── test/
+│       ├── java/
+│       │   └── mwmanger/                        # JUnit 5 단위 테스트
+│       │       ├── agentfunction/
+│       │       │   └── AgentFuncFactoryTest.java
+│       │       ├── common/
+│       │       │   └── CommonTest.java
+│       │       ├── order/
+│       │       │   └── OrderTest.java
+│       │       ├── vo/
+│       │       │   ├── CommandVOTest.java
+│       │       │   └── ResultVOTest.java
+│       │       └── README_TESTS.md
+│       │
+│       └── resources/
+│           └── test-agent.properties           # 테스트용 설정
 │
-├── common/
-│   ├── Config.java              # 설정 관리 (Singleton)
-│   └── Common.java              # HTTP 통신 유틸리티
+├── test/
+│   └── demos/                                   # 간단한 데모 테스트 (JUnit 불필요)
+│       ├── README.md
+│       ├── DirectTest.java                      # 테스트 데이터 설명 (한글)
+│       ├── TestDataDemo.java                    # 테스트 데이터 설명 (영어)
+│       ├── QuickTest.java                       # VO 빠른 테스트
+│       └── SimpleTest.java                      # 수동 테스트 러너
 │
-├── order/                       # 명령 실행 모듈
-│   ├── Order.java               # 추상 Order 클래스
-│   ├── OrderCaller.java         # Order 동적 로딩 및 실행
-│   ├── ExeShell.java            # 쉘 스크립트 실행
-│   ├── ExeScript.java           # 스크립트 실행
-│   ├── ExeText.java             # 텍스트 실행
-│   ├── ExeAgentFunc.java        # Agent Function 실행
-│   ├── ReadFile.java            # 파일 읽기 (추상)
-│   ├── ReadPlainFile.java       # 일반 파일 읽기
-│   ├── ReadFullPathFile.java   # 전체 경로 파일 읽기
-│   ├── DownloadFile.java        # 파일 다운로드
-│   └── GetRefreshToken.java     # Refresh Token 갱신
-│
-├── agentfunction/               # 에이전트 기능 모듈
-│   ├── AgentFunc.java           # AgentFunc 인터페이스
-│   ├── AgentFuncFactory.java    # Factory 패턴
-│   ├── HelloFunc.java           # Hello World 예제
-│   ├── JmxStatFunc.java         # JMX 통계 수집
-│   ├── SSLCertiFunc.java        # SSL 인증서 정보
-│   ├── SSLCertiFileFunc.java    # SSL 인증서 파일
-│   ├── DownloadNUnzipFunc.java  # 파일 다운로드 및 압축해제
-│   └── SuckSyperFunc.java       # Syper 데이터 수집
-│
-├── kafka/
-│   ├── MwConsumerThread.java    # Kafka Consumer (명령 수신)
-│   ├── MwProducer.java          # Kafka Producer (결과 전송)
-│   └── MwHealthCheckThread.java # Kafka 상태 모니터링
-│
-└── vo/
-    ├── CommandVO.java           # 명령 VO
-    ├── ResultVO.java            # 결과 VO
-    ├── RawCommandsVO.java       # 원시 명령 VO
-    └── MwResponseVO.java        # HTTP 응답 VO
+├── pom.xml                                      # Maven 빌드 파일
+├── build.gradle                                 # Gradle 빌드 파일
+├── README.md                                    # 프로젝트 문서
+├── TESTING.md                                   # 테스트 가이드
+├── DEPENDENCIES.md                              # 의존성 정보
+└── WORK_HISTORY.md                              # 작업 이력
 ```
 
 ## 설정 방법
