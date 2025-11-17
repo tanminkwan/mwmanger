@@ -38,7 +38,7 @@ javac -encoding UTF-8 \
       -source 1.8 \
       -target 1.8 \
       -d build/classes \
-      -cp ".$CLASSPATH" \
+      -cp "$CLASSPATH" \
       @sources.txt
 
 if [ $? -ne 0 ]; then
