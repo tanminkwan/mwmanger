@@ -12,6 +12,7 @@
 
 # Package Files #
 *.jar
+!lib/*.jar
 *.war
 *.nar
 *.ear
@@ -54,7 +55,6 @@ bin/
 
 # Agent specific
 agent.properties
-lib/
 
 # Claude Code
 .claude/

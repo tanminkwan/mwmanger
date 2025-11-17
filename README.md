@@ -48,7 +48,41 @@ MwManger는 분산 환경의 서버 관리를 자동화하기 위한 에이전�
 
 ## 빌드 방법
 
-### Maven 사용
+### 오프라인 빌드 (인터넷 차단 환경)
+
+**1단계: 의존성 다운로드 (인터넷 연결된 환경에서)**
+
+```bash
+# Linux/Mac
+./download-dependencies.sh
+
+# Windows
+download-dependencies.bat
+```
+
+**2단계: 오프라인 환경으로 전체 프로젝트 복사**
+
+다음 디렉토리/파일들을 복사:
+- `src/` - 소스 코드
+- `lib/` - 다운로드된 JAR 파일들 (12개)
+- `build-offline.sh` 또는 `build-offline.bat`
+
+**3단계: 오프라인 빌드 실행**
+
+```bash
+# Linux/Mac
+./build-offline.sh
+
+# Windows
+build-offline.bat
+
+# 생성된 파일
+build/jar/mwmanger-0000.0008.0005.jar
+```
+
+자세한 내용은 [lib/README.md](lib/README.md) 참조
+
+### Maven 사용 (온라인 환경)
 
 ```bash
 # 의존성 포함 실행 가능 JAR 생성
@@ -58,7 +92,7 @@ mvn clean package
 target/mwmanger-0000.0008.0005-jar-with-dependencies.jar
 ```
 
-### Gradle 사용
+### Gradle 사용 (온라인 환경)
 
 ```bash
 # Fat JAR 생성
