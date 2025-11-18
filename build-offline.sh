@@ -1,11 +1,12 @@
-#!/bin/bash
+#!/usr/bin/env bash
 # 오프라인 빌드 스크립트
 # Maven/Gradle 없이 javac만으로 빌드합니다.
 
 set -e
 
 PROJECT_NAME="mwmanger"
-VERSION="0000.0008.0005"
+# Read version from build.gradle
+VERSION=$(grep "^version = " build.gradle | sed "s/version = '\(.*\)'/\1/")
 MAIN_CLASS="mwmanger.MwAgent"
 
 echo "========================================="
@@ -54,6 +55,7 @@ echo "[4/5] Creating manifest..."
 cat > build/jar/MANIFEST.MF << EOF
 Manifest-Version: 1.0
 Main-Class: $MAIN_CLASS
+Implementation-Version: $VERSION
 Class-Path: $(cd lib && ls *.jar | tr '\n' ' ')
 EOF
 

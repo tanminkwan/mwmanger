@@ -4,7 +4,7 @@ plugins {
 }
 
 group = 'com.leebalso'
-version = '0000.0008.0005'
+version = '0000.0009.0001'
 sourceCompatibility = '1.8'
 targetCompatibility = '1.8'
 
@@ -53,11 +53,18 @@ application {
 // Default configuration is used - src/main/java
 // No need to override sourceSets unless customization is required
 
+// Configure JAR manifest for all JAR tasks
+tasks.withType(Jar) {
+    manifest {
+        attributes(
+            'Main-Class': 'mwmanger.MwAgent',
+            'Implementation-Version': project.version
+        )
+    }
+}
+
 // Task to create fat JAR with all dependencies
 task fatJar(type: Jar) {
-    manifest {
-        attributes 'Main-Class': 'mwmanger.MwAgent'
-    }
     archiveBaseName = project.name + '-all'
     duplicatesStrategy = DuplicatesStrategy.EXCLUDE
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }

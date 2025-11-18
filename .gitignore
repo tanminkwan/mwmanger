@@ -56,5 +56,14 @@ bin/
 # Agent specific
 agent.properties
 
+# Build artifacts and temporary files
+META-INF/
+deploy/
+*.txt
+!TESTING.md
+!DEPENDENCIES.md
+!WORK_HISTORY.md
+sources.txt
+
 # Claude Code
 .claude/

@@ -8,6 +8,7 @@ MwManger는 Leebalso(리발소) 프로젝트의 에이전트 프로그램으로,
 - [시스템 요구사항](#시스템-요구사항)
 - [필수 라이브러리](#필수-라이브러리)
 - [빌드 방법](#빌드-방법)
+- [버전 관리](#버전-관리)
 - [시스템 아키텍처](#시스템-아키텍처)
 - [프로젝트 구조](#프로젝트-구조)
 - [설정 방법](#설정-방법)
@@ -21,7 +22,7 @@ MwManger는 Leebalso(리발소) 프로젝트의 에이전트 프로그램으로,
 
 MwManger는 분산 환경의 서버 관리를 자동화하기 위한 에이전트 프로그램입니다. 중앙 Leebalso 서버의 지시에 따라 다양한 작업을 수행하며, 실시간 명령 수신 및 결과 전송을 지원합니다.
 
-**버전**: 0000.0008.0005
+**버전**: 0000.0009.0001
 **타입**: JAVAAGENT
 
 ## 시스템 요구사항
@@ -77,7 +78,7 @@ download-dependencies.bat
 build-offline.bat
 
 # 생성된 파일
-build/jar/mwmanger-0000.0008.0005.jar
+build/jar/mwmanger-0000.0009.0001.jar
 ```
 
 자세한 내용은 [lib/README.md](lib/README.md) 참조
@@ -89,7 +90,7 @@ build/jar/mwmanger-0000.0008.0005.jar
 mvn clean package
 
 # 생성된 파일
-target/mwmanger-0000.0008.0005-jar-with-dependencies.jar
+target/mwmanger-0000.0009.0001-jar-with-dependencies.jar
 ```
 
 ### Gradle 사용 (온라인 환경)
@@ -99,7 +100,93 @@ target/mwmanger-0000.0008.0005-jar-with-dependencies.jar
 gradle fatJar
 
 # 생성된 파일
-build/libs/mwmanger-all-0000.0008.0005.jar
+build/libs/mwmanger-all-0000.0009.0001.jar
+```
+
+## 버전 관리
+
+프로젝트는 **단일 소스 버전 관리 시스템**을 사용합니다.
+
+### 버전 관리 원칙
+
+**build.gradle**이 유일한 버전 소스(Single Source of Truth)입니다:
+
+```
+build.gradle (version = '0000.0009.0001')
+    ↓
+    ├─→ build-offline.sh (자동으로 읽음)
+    │       ↓
+    │   MANIFEST.MF (Implementation-Version 추가)
+    │
+    ├─→ build-offline.bat (자동으로 읽음)
+    │       ↓
+    │   MANIFEST.MF (Implementation-Version 추가)
+    │
+    └─→ Gradle build (자동으로 추가)
+            ↓
+        MANIFEST.MF (Implementation-Version 추가)
+
+MANIFEST.MF (Implementation-Version)
+    ↓
+Config.java (런타임에 자동으로 읽음)
+```
+
+### 버전 변경 방법
+
+버전을 변경하려면 **build.gradle 파일 한 곳만 수정**하면 됩니다:
+
+```gradle
+// build.gradle
+version = '0000.0010.0000'  // 여기만 수정!
+```
+
+그 후 빌드하면 자동으로 모든 곳에 반영됩니다:
+
+```bash
+# Linux/Mac
+./build-offline.sh
+
+# Windows
+build-offline.bat
+
+# Gradle
+gradle build
+```
+
+### 버전 읽기 방식
+
+1. **빌드 스크립트**: build.gradle에서 `version` 값을 파싱
+2. **MANIFEST.MF**: 빌드 시 `Implementation-Version` 헤더에 버전 추가
+3. **Config.java**: 런타임에 `Package.getImplementationVersion()`으로 읽음
+   - JAR 실행 시: MANIFEST.MF에서 버전 자동 로드
+   - IDE 실행 시: Fallback 버전 "0000.0000.0000-DEV" 사용
+
+### 버전 확인
+
+**빌드된 JAR의 버전 확인:**
+
+```bash
+# MANIFEST.MF 확인
+jar xf mwmanger-0000.0009.0001.jar META-INF/MANIFEST.MF
+cat META-INF/MANIFEST.MF
+
+# 출력 예시:
+# Manifest-Version: 1.0
+# Implementation-Version: 0000.0009.0001
+# Main-Class: mwmanger.MwAgent
+```
+
+**실행 중 버전 확인:**
+
+에이전트 실행 시 로그에서 확인 가능하며, Config 클래스가 자동으로 MANIFEST의 버전을 읽어옵니다.
+
+### 버전 형식
+
+```
+0000.0009.0001
+  │    │    └─ Patch (버그 수정)
+  │    └────── Minor (기능 추가)
+  └─────────── Major (큰 변경)
 ```
 
 ## 주요 특징
@@ -298,10 +385,10 @@ Maven 또는 Gradle로 빌드한 경우:
 
 ```bash
 # Maven으로 빌드한 경우
-java -jar target/mwmanger-0000.0008.0005-jar-with-dependencies.jar
+java -jar target/mwmanger-0000.0009.0001-jar-with-dependencies.jar
 
 # Gradle으로 빌드한 경우
-java -jar build/libs/mwmanger-all-0000.0008.0005.jar
+java -jar build/libs/mwmanger-all-0000.0009.0001.jar
 ```
 
 ### Classpath 직접 지정
@@ -613,6 +700,6 @@ gradle test
 
 ---
 
-**Last Updated**: 2025-01-23
-**Version**: 0000.0008.0005
+**Last Updated**: 2025-11-18
+**Version**: 0000.0009.0001
 **Test Framework**: JUnit 5.8.2

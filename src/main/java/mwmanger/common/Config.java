@@ -13,11 +13,29 @@ import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
 public final class Config {
-	
+
 	private static final Config INSTANCE = new Config();
-	
-	private String agent_version = "0000.0008.0005";
+
+	private String agent_version = readVersionFromManifest();
 	private String agent_type = "JAVAAGENT";
+
+	/**
+	 * Read version from MANIFEST.MF (Implementation-Version)
+	 * Falls back to DEV version if not found (e.g., running from IDE)
+	 */
+	private static String readVersionFromManifest() {
+		try {
+			Package pkg = Config.class.getPackage();
+			String version = pkg.getImplementationVersion();
+			if (version != null && !version.isEmpty()) {
+				return version;
+			}
+		} catch (Exception e) {
+			// Ignore and use fallback
+		}
+		// Fallback for development/IDE environment
+		return "0000.0000.0000-DEV";
+	}
 	private String hostName = "";
 	private String userName = "";
 	private String server_url = "";
