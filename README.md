@@ -5,6 +5,10 @@ MwManger는 Leebalso(리발소) 프로젝트의 에이전트 프로그램으로,
 ## 목차
 - [프로젝트 개요](#프로젝트-개요)
 - [주요 특징](#주요-특징)
+- [시스템 요구사항](#시스템-요구사항)
+- [필수 라이브러리](#필수-라이브러리)
+- [빌드 방법](#빌드-방법)
+- [버전 관리](#버전-관리)
 - [시스템 아키텍처](#시스템-아키텍처)
 - [프로젝트 구조](#프로젝트-구조)
 - [설정 방법](#설정-방법)
@@ -18,8 +22,172 @@ MwManger는 Leebalso(리발소) 프로젝트의 에이전트 프로그램으로,
 
 MwManger는 분산 환경의 서버 관리를 자동화하기 위한 에이전트 프로그램입니다. 중앙 Leebalso 서버의 지시에 따라 다양한 작업을 수행하며, 실시간 명령 수신 및 결과 전송을 지원합니다.
 
-**버전**: 0000.0008.0005
+**버전**: 0000.0009.0001
 **타입**: JAVAAGENT
+
+## 시스템 요구사항
+
+- **JDK**: 1.8 (Java 8) 이상
+- **메모리**: 최소 256MB
+- **디스크**: 최소 100MB
+- **네트워크**: Leebalso 서버 및 Kafka 브로커 접근 가능
+
+## 필수 라이브러리
+
+프로젝트는 다음 외부 라이브러리에 의존합니다 (JDK 1.8 호환):
+
+| 라이브러리 | 버전 | 용도 |
+|-----------|------|------|
+| Apache HttpClient | 4.5.13 | HTTP/HTTPS 통신 |
+| Apache Kafka Client | 3.1.0 | Kafka 메시징 |
+| BouncyCastle | 1.70 | TLS 1.2 지원 (AIX) |
+| JSON Simple | 1.1.1 | JSON 처리 |
+| Apache Commons Codec | 1.11 | 인코딩 유틸리티 |
+| SLF4J | 1.7.30 | 로깅 (Kafka 의존성) |
+
+자세한 의존성 정보는 [DEPENDENCIES.md](DEPENDENCIES.md) 참조
+
+## 빌드 방법
+
+### 오프라인 빌드 (인터넷 차단 환경)
+
+**1단계: 의존성 다운로드 (인터넷 연결된 환경에서)**
+
+```bash
+# Linux/Mac
+./download-dependencies.sh
+
+# Windows
+download-dependencies.bat
+```
+
+**2단계: 오프라인 환경으로 전체 프로젝트 복사**
+
+다음 디렉토리/파일들을 복사:
+- `src/` - 소스 코드
+- `lib/` - 다운로드된 JAR 파일들 (12개)
+- `build-offline.sh` 또는 `build-offline.bat`
+
+**3단계: 오프라인 빌드 실행**
+
+```bash
+# Linux/Mac
+./build-offline.sh
+
+# Windows
+build-offline.bat
+
+# 생성된 파일
+build/jar/mwmanger-0000.0009.0001.jar
+```
+
+자세한 내용은 [lib/README.md](lib/README.md) 참조
+
+### Maven 사용 (온라인 환경)
+
+```bash
+# 의존성 포함 실행 가능 JAR 생성
+mvn clean package
+
+# 생성된 파일
+target/mwmanger-0000.0009.0001-jar-with-dependencies.jar
+```
+
+### Gradle 사용 (온라인 환경)
+
+```bash
+# Fat JAR 생성
+gradle fatJar
+
+# 생성된 파일
+build/libs/mwmanger-all-0000.0009.0001.jar
+```
+
+## 버전 관리
+
+프로젝트는 **단일 소스 버전 관리 시스템**을 사용합니다.
+
+### 버전 관리 원칙
+
+**build.gradle**이 유일한 버전 소스(Single Source of Truth)입니다:
+
+```
+build.gradle (version = '0000.0009.0001')
+    ↓
+    ├─→ build-offline.sh (자동으로 읽음)
+    │       ↓
+    │   MANIFEST.MF (Implementation-Version 추가)
+    │
+    ├─→ build-offline.bat (자동으로 읽음)
+    │       ↓
+    │   MANIFEST.MF (Implementation-Version 추가)
+    │
+    └─→ Gradle build (자동으로 추가)
+            ↓
+        MANIFEST.MF (Implementation-Version 추가)
+
+MANIFEST.MF (Implementation-Version)
+    ↓
+Config.java (런타임에 자동으로 읽음)
+```
+
+### 버전 변경 방법
+
+버전을 변경하려면 **build.gradle 파일 한 곳만 수정**하면 됩니다:
+
+```gradle
+// build.gradle
+version = '0000.0010.0000'  // 여기만 수정!
+```
+
+그 후 빌드하면 자동으로 모든 곳에 반영됩니다:
+
+```bash
+# Linux/Mac
+./build-offline.sh
+
+# Windows
+build-offline.bat
+
+# Gradle
+gradle build
+```
+
+### 버전 읽기 방식
+
+1. **빌드 스크립트**: build.gradle에서 `version` 값을 파싱
+2. **MANIFEST.MF**: 빌드 시 `Implementation-Version` 헤더에 버전 추가
+3. **Config.java**: 런타임에 `Package.getImplementationVersion()`으로 읽음
+   - JAR 실행 시: MANIFEST.MF에서 버전 자동 로드
+   - IDE 실행 시: Fallback 버전 "0000.0000.0000-DEV" 사용
+
+### 버전 확인
+
+**빌드된 JAR의 버전 확인:**
+
+```bash
+# MANIFEST.MF 확인
+jar xf mwmanger-0000.0009.0001.jar META-INF/MANIFEST.MF
+cat META-INF/MANIFEST.MF
+
+# 출력 예시:
+# Manifest-Version: 1.0
+# Implementation-Version: 0000.0009.0001
+# Main-Class: mwmanger.MwAgent
+```
+
+**실행 중 버전 확인:**
+
+에이전트 실행 시 로그에서 확인 가능하며, Config 클래스가 자동으로 MANIFEST의 버전을 읽어옵니다.
+
+### 버전 형식
+
+```
+0000.0009.0001
+  │    │    └─ Patch (버그 수정)
+  │    └────── Minor (기능 추가)
+  └─────────── Major (큰 변경)
+```
 
 ## 주요 특징
 
@@ -80,52 +248,90 @@ MwManger는 분산 환경의 서버 관리를 자동화하기 위한 에이전�
 
 ## 프로젝트 구조
 
+표준 Maven/Gradle 프로젝트 구조를 따릅니다:
+
 ```
 mwmanger/
-├── MwAgent.java                 # 메인 진입점
-├── PreWork.java                 # 에이전트 등록 및 승인 처리
-├── FirstWork.java               # Kafka 연결 등 초기화
-├── MainWork.java                # 메인 루프 (명령 수신 및 처리)
-├── OrderCallerThread.java       # 명령 실행 스레드
-├── ShutdownThread.java          # 종료 처리
+├── src/
+│   ├── main/
+│   │   └── java/
+│   │       └── mwmanger/
+│   │           ├── MwAgent.java                 # 메인 진입점
+│   │           ├── PreWork.java                 # 에이전트 등록 및 승인 처리
+│   │           ├── FirstWork.java               # Kafka 연결 등 초기화
+│   │           ├── MainWork.java                # 메인 루프 (명령 수신 및 처리)
+│   │           ├── OrderCallerThread.java       # 명령 실행 스레드
+│   │           ├── ShutdownThread.java          # 종료 처리
+│   │           │
+│   │           ├── common/
+│   │           │   ├── Config.java              # 설정 관리 (Singleton)
+│   │           │   └── Common.java              # HTTP 통신 유틸리티
+│   │           │
+│   │           ├── order/                       # 명령 실행 모듈
+│   │           │   ├── Order.java               # 추상 Order 클래스
+│   │           │   ├── OrderCaller.java         # Order 동적 로딩 및 실행
+│   │           │   ├── ExeShell.java            # 쉘 스크립트 실행
+│   │           │   ├── ExeScript.java           # 스크립트 실행
+│   │           │   ├── ExeText.java             # 텍스트 실행
+│   │           │   ├── ExeAgentFunc.java        # Agent Function 실행
+│   │           │   ├── ReadFile.java            # 파일 읽기 (추상)
+│   │           │   ├── ReadPlainFile.java       # 일반 파일 읽기
+│   │           │   ├── ReadFullPathFile.java   # 전체 경로 파일 읽기
+│   │           │   ├── DownloadFile.java        # 파일 다운로드
+│   │           │   └── GetRefreshToken.java     # Refresh Token 갱신
+│   │           │
+│   │           ├── agentfunction/               # 에이전트 기능 모듈
+│   │           │   ├── AgentFunc.java           # AgentFunc 인터페이스
+│   │           │   ├── AgentFuncFactory.java    # Factory 패턴
+│   │           │   ├── HelloFunc.java           # Hello World 예제
+│   │           │   ├── JmxStatFunc.java         # JMX 통계 수집
+│   │           │   ├── SSLCertiFunc.java        # SSL 인증서 정보
+│   │           │   ├── SSLCertiFileFunc.java    # SSL 인증서 파일
+│   │           │   ├── DownloadNUnzipFunc.java  # 파일 다운로드 및 압축해제
+│   │           │   └── SuckSyperFunc.java       # Syper 데이터 수집
+│   │           │
+│   │           ├── kafka/
+│   │           │   ├── MwConsumerThread.java    # Kafka Consumer (명령 수신)
+│   │           │   ├── MwProducer.java          # Kafka Producer (결과 전송)
+│   │           │   └── MwHealthCheckThread.java # Kafka 상태 모니터링
+│   │           │
+│   │           └── vo/
+│   │               ├── CommandVO.java           # 명령 VO
+│   │               ├── ResultVO.java            # 결과 VO
+│   │               ├── RawCommandsVO.java       # 원시 명령 VO
+│   │               └── MwResponseVO.java        # HTTP 응답 VO
+│   │
+│   └── test/
+│       ├── java/
+│       │   └── mwmanger/                        # JUnit 5 단위 테스트
+│       │       ├── agentfunction/
+│       │       │   └── AgentFuncFactoryTest.java
+│       │       ├── common/
+│       │       │   └── CommonTest.java
+│       │       ├── order/
+│       │       │   └── OrderTest.java
+│       │       ├── vo/
+│       │       │   ├── CommandVOTest.java
+│       │       │   └── ResultVOTest.java
+│       │       └── README_TESTS.md
+│       │
+│       └── resources/
+│           └── test-agent.properties           # 테스트용 설정
 │
-├── common/
-│   ├── Config.java              # 설정 관리 (Singleton)
-│   └── Common.java              # HTTP 통신 유틸리티
+├── test/
+│   └── demos/                                   # 간단한 데모 테스트 (JUnit 불필요)
+│       ├── README.md
+│       ├── DirectTest.java                      # 테스트 데이터 설명 (한글)
+│       ├── TestDataDemo.java                    # 테스트 데이터 설명 (영어)
+│       ├── QuickTest.java                       # VO 빠른 테스트
+│       └── SimpleTest.java                      # 수동 테스트 러너
 │
-├── order/                       # 명령 실행 모듈
-│   ├── Order.java               # 추상 Order 클래스
-│   ├── OrderCaller.java         # Order 동적 로딩 및 실행
-│   ├── ExeShell.java            # 쉘 스크립트 실행
-│   ├── ExeScript.java           # 스크립트 실행
-│   ├── ExeText.java             # 텍스트 실행
-│   ├── ExeAgentFunc.java        # Agent Function 실행
-│   ├── ReadFile.java            # 파일 읽기 (추상)
-│   ├── ReadPlainFile.java       # 일반 파일 읽기
-│   ├── ReadFullPathFile.java   # 전체 경로 파일 읽기
-│   ├── DownloadFile.java        # 파일 다운로드
-│   └── GetRefreshToken.java     # Refresh Token 갱신
-│
-├── agentfunction/               # 에이전트 기능 모듈
-│   ├── AgentFunc.java           # AgentFunc 인터페이스
-│   ├── AgentFuncFactory.java    # Factory 패턴
-│   ├── HelloFunc.java           # Hello World 예제
-│   ├── JmxStatFunc.java         # JMX 통계 수집
-│   ├── SSLCertiFunc.java        # SSL 인증서 정보
-│   ├── SSLCertiFileFunc.java    # SSL 인증서 파일
-│   ├── DownloadNUnzipFunc.java  # 파일 다운로드 및 압축해제
-│   └── SuckSyperFunc.java       # Syper 데이터 수집
-│
-├── kafka/
-│   ├── MwConsumerThread.java    # Kafka Consumer (명령 수신)
-│   ├── MwProducer.java          # Kafka Producer (결과 전송)
-│   └── MwHealthCheckThread.java # Kafka 상태 모니터링
-│
-└── vo/
-    ├── CommandVO.java           # 명령 VO
-    ├── ResultVO.java            # 결과 VO
-    ├── RawCommandsVO.java       # 원시 명령 VO
-    └── MwResponseVO.java        # HTTP 응답 VO
+├── pom.xml                                      # Maven 빌드 파일
+├── build.gradle                                 # Gradle 빌드 파일
+├── README.md                                    # 프로젝트 문서
+├── TESTING.md                                   # 테스트 가이드
+├── DEPENDENCIES.md                              # 의존성 정보
+└── WORK_HISTORY.md                              # 작업 이력
 ```
 
 ## 설정 방법
@@ -173,7 +379,19 @@ log_level=INFO
 
 ## 실행 방법
 
-### 직접 실행
+### Fat JAR 실행 (권장)
+
+Maven 또는 Gradle로 빌드한 경우:
+
+```bash
+# Maven으로 빌드한 경우
+java -jar target/mwmanger-0000.0009.0001-jar-with-dependencies.jar
+
+# Gradle으로 빌드한 경우
+java -jar build/libs/mwmanger-all-0000.0009.0001.jar
+```
+
+### Classpath 직접 지정
 
 ```bash
 java -cp ".:lib/*" mwmanger.MwAgent
@@ -182,6 +400,10 @@ java -cp ".:lib/*" mwmanger.MwAgent
 ### 백그라운드 실행
 
 ```bash
+# Fat JAR 실행
+nohup java -jar mwmanger-all.jar > /dev/null 2>&1 &
+
+# Classpath 지정 실행
 nohup java -cp ".:lib/*" mwmanger.MwAgent > /dev/null 2>&1 &
 ```
 
@@ -198,7 +420,10 @@ After=network.target
 Type=simple
 User=mwagent
 WorkingDirectory=/opt/mwagent
-ExecStart=/usr/bin/java -cp ".:lib/*" mwmanger.MwAgent
+# Fat JAR 실행 (권장)
+ExecStart=/usr/bin/java -jar /opt/mwagent/mwmanger-all.jar
+# 또는 Classpath 지정
+# ExecStart=/usr/bin/java -cp ".:lib/*" mwmanger.MwAgent
 Restart=always
 RestartSec=10
 
@@ -209,6 +434,7 @@ WantedBy=multi-user.target
 ```bash
 sudo systemctl enable mwagent
 sudo systemctl start mwagent
+sudo systemctl status mwagent
 ```
 
 ## 실행 흐름
@@ -439,11 +665,41 @@ public class CustomOrder extends Order {
 2. `AgentFuncFactory`에 case 추가
 3. `ExeAgentFunc` Order로 호출
 
+## 테스트
+
+### 단위 테스트 실행
+
+프로젝트는 JUnit 5 기반의 단위 테스트를 포함합니다:
+
+```bash
+# Maven으로 테스트 실행
+mvn test
+
+# Gradle로 테스트 실행
+gradle test
+```
+
+### 테스트 커버리지
+
+- **VO 클래스**: CommandVO, ResultVO
+- **유틸리티**: Common (escape, fillResult, makeOneResultArray)
+- **Order 클래스**: 공통 기능 (replaceParam, getHash)
+- **Factory 클래스**: AgentFuncFactory
+
+자세한 테스트 정보는 [src/test/java/mwmanger/README_TESTS.md](src/test/java/mwmanger/README_TESTS.md) 참조
+
+### 테스트 프레임워크
+
+- JUnit 5 (5.8.2)
+- Mockito (3.12.4)
+- AssertJ (3.21.0)
+
 ## 문의 및 지원
 
 프로젝트 관련 문의사항이나 이슈는 프로젝트 관리자에게 연락하시기 바랍니다.
 
 ---
 
-**Last Updated**: 2025-01-23
-**Version**: 0000.0008.0005
+**Last Updated**: 2025-11-18
+**Version**: 0000.0009.0001
+**Test Framework**: JUnit 5.8.2
