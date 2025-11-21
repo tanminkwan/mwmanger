@@ -2,43 +2,60 @@ package mwmanger;
 
 import static mwmanger.common.Config.getConfig;
 
-import mwmanger.vo.RawCommandsVO;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import mwmanger.lifecycle.AgentLifecycleManager;
+
+/**
+ * MwAgent - Remote Management Agent
+ *
+ * Phase 1 Refactoring: Lifecycle Management
+ * - 기존: PreWork → FirstWork → MainWork (절차적)
+ * - 개선: AgentLifecycleManager (생명주기 기반)
+ *
+ * 아키텍처:
+ * - AgentLifecycleManager: 전체 생명주기 관리
+ * - BootstrapService: 등록 및 승인
+ * - KafkaService: Kafka 연결 관리
+ * - CommandExecutorService: 명령 실행 관리
+ * - GracefulShutdownHandler: 정상 종료 처리
+ */
 public class MwAgent {
 
-	//static Config config = Config.getInstance();
-	
+    private static final Logger logger = getConfig().getLogger();
+
     public static void main(String[] args) {
 
-    	getConfig().setConfig();
-    	
-    	Runtime.getRuntime().addShutdownHook(new ShutdownThread());
-		
-		PreWork pw = new PreWork();
-		RawCommandsVO rcv = pw.doPreWork();
-		
-		long rtn = 0;
-		
-		FirstWork fc = new FirstWork();
-		rtn = fc.executeFirstCommands(rcv.getCommands());
-		
-		if(rtn<0){
-			
-			getConfig().getLogger().info("First commands execution failed.");
-	        System.exit(0);
-	        
-		}
+        try {
+            // Initialize configuration
+            getConfig().setConfig();
 
-		MainWork c = new MainWork();
-		rtn = c.doAgentWork();
-		
-		if(rtn<0){
-			
-			getConfig().getLogger().info("Commands execution failed.");
-	        System.exit(0);
-	        
-		}
-	   
-	}
+            // Create lifecycle manager
+            AgentLifecycleManager lifecycleManager = new AgentLifecycleManager();
 
+            // Register shutdown hook for graceful termination
+            Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+                logger.info("Shutdown signal received");
+                try {
+                    lifecycleManager.stop();
+                } catch (Exception e) {
+                    logger.log(Level.SEVERE, "Error during shutdown", e);
+                }
+            }, "ShutdownHook"));
+
+            // Start agent
+            lifecycleManager.start();
+
+            // Wait for termination
+            lifecycleManager.awaitTermination();
+
+            logger.info("Agent terminated normally");
+            System.exit(0);
+
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "Agent failed to start", e);
+            System.exit(1);
+        }
+    }
 }

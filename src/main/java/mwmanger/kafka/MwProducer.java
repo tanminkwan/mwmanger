@@ -59,5 +59,21 @@ public final class MwProducer {
 		}
 		return instance;
 	}
-	
+
+	/**
+	 * Producer를 정상적으로 종료합니다.
+	 * Graceful shutdown을 위해 추가됨.
+	 */
+	public void close() {
+		if (producer != null) {
+			try {
+				producer.flush();
+				producer.close();
+				getConfig().getLogger().info("Kafka producer closed successfully");
+			} catch (Exception e) {
+				getConfig().getLogger().log(Level.WARNING, "Error closing Kafka producer", e);
+			}
+		}
+	}
+
 }
