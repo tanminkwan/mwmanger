@@ -42,6 +42,11 @@ build/
 !gradle/wrapper/gradle-wrapper.jar
 .gradletasknamecache
 
+# Test Coverage Reports
+*.exec
+jacoco.xml
+.jacoco/
+
 # IDE
 .idea/
 *.iml

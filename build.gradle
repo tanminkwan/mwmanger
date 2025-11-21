@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'application'
+    id 'jacoco'
 }
 
 group = 'com.leebalso'
@@ -85,4 +86,55 @@ test {
         events "passed", "skipped", "failed"
         exceptionFormat "full"
     }
+    // Generate coverage report after running tests
+    finalizedBy jacocoTestReport
 }
+
+// JaCoCo configuration for code coverage
+jacoco {
+    toolVersion = "0.8.7"
+}
+
+// JaCoCo test report configuration
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+
+    afterEvaluate {
+        classDirectories.setFrom(files(classDirectories.files.collect {
+            fileTree(dir: it, exclude: [
+                // Exclude main entry point
+                '**/MwAgent.class',
+                // Exclude VO classes (simple getters/setters)
+                '**/vo/**/*VO.class',
+                // Exclude thread classes (hard to test)
+                '**/*Thread.class'
+            ])
+        }))
+    }
+}
+
+// JaCoCo coverage verification
+jacocoTestCoverageVerification {
+    violationRules {
+        rule {
+            limit {
+                counter = 'LINE'
+                value = 'COVEREDRATIO'
+                minimum = 0.20 // 20% line coverage
+            }
+            limit {
+                counter = 'BRANCH'
+                value = 'COVEREDRATIO'
+                minimum = 0.15 // 15% branch coverage
+            }
+        }
+    }
+}
+
+// Make check task depend on coverage verification
+check.dependsOn jacocoTestCoverageVerification

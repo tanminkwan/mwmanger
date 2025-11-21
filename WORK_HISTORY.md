@@ -1,6 +1,108 @@
 # Work History - MwManger Agent
 
-## 2025-01-23 (오늘 작업)
+## 2025-11-20 (오늘 작업)
+
+### 작업 브랜치
+- `refactoring_major_202511` 브랜치에서 작업
+
+### 완료된 작업
+
+#### 1. 빌드 및 실행 문제 해결
+- ✅ build-offline.sh 실행 후 JAR 실행 방법 파악
+- ✅ RedHat Linux에서 classpath 이슈 해결
+  - 문제: `java -cp ".:lib/*" mwmanger.MwAgent` 실패
+  - 원인: `.`은 클래스 파일만 참조, JAR 파일은 명시 필요
+  - 해결: `java -cp "build/jar/mwmanger-0000.0009.0001.jar:lib/*" mwmanger.MwAgent`
+
+#### 2. 등록(Registration) 모듈화 완료 🎉
+**목표**: 최초 실행 시 가입(register) 단계를 모듈화
+
+**Before**: PreWork.java (150줄)
+- 모든 로직이 한 클래스에 집중
+- 테스트 불가능, 재사용 불가능
+- Config 싱글톤에 강하게 결합
+
+**After**: 모듈화된 구조 (6개 클래스)
+- ✅ `AgentStatus.java` - 상태 enum (type-safe)
+  - NOT_REGISTERED, PENDING_APPROVAL, APPROVED, etc.
+  - 매직 넘버(-1, -2) 제거
+- ✅ `RegistrationRequest.java` - 등록 요청 VO
+- ✅ `RegistrationResponse.java` - 등록 응답 VO
+- ✅ `RegistrationService.java` - Agent 등록 로직
+- ✅ `AgentStatusService.java` - Agent 상태 확인
+- ✅ `BootstrapService.java` - 전체 등록 프로세스 관리
+- ✅ `PreWork.java` 리팩토링 (150줄 → 40줄, 73% 감소)
+
+**구조**:
+```
+src/main/java/mwmanger/
+├── service/registration/
+│   ├── BootstrapService.java          # 전체 등록 프로세스 조율
+│   ├── RegistrationService.java       # Agent 등록만 담당
+│   └── AgentStatusService.java        # Agent 상태 확인만 담당
+├── vo/
+│   ├── AgentStatus.java               # 상태 enum
+│   ├── RegistrationRequest.java       # 등록 요청
+│   └── RegistrationResponse.java      # 등록 응답
+└── PreWork.java (40줄)                 # 단순한 wrapper
+```
+
+**개선 효과**:
+1. 단일 책임 원칙 (SRP) 준수
+2. 테스트 용이성 (DI constructor 제공)
+3. 재사용성 향상
+4. 타입 안정성 (enum 사용)
+5. 코드 가독성 대폭 향상
+
+#### 3. 빌드 및 검증
+- ✅ `build-offline.bat` 실행 성공
+- ✅ 새로운 모듈 JAR에 포함 확인
+  - mwmanger/service/registration/*.class
+  - mwmanger/vo/AgentStatus.class
+  - mwmanger/vo/RegistrationRequest.class
+  - mwmanger/vo/RegistrationResponse.class
+
+### 현재 상태
+
+#### Git 상태
+- 브랜치: `refactoring_major_202511`
+- 변경된 파일:
+  - Modified: `src/main/java/mwmanger/PreWork.java`
+  - New: `src/main/java/mwmanger/service/registration/*.java` (3 files)
+  - New: `src/main/java/mwmanger/vo/AgentStatus.java`
+  - New: `src/main/java/mwmanger/vo/RegistrationRequest.java`
+  - New: `src/main/java/mwmanger/vo/RegistrationResponse.java`
+- 커밋 필요: Yes
+
+### 다음 작업 (Phase 2: Critical 보안 취약점 수정)
+
+REFACTORING_PLAN.md의 Phase 2를 진행해야 합니다:
+
+#### 우선순위 CRITICAL
+1. [ ] **Command Injection 수정** (ExeShell.java:50)
+   - ProcessBuilder 사용으로 전환
+   - Command Whitelist 구현
+   - ExeScript.java, ExeText.java도 동일 적용
+
+2. [ ] **Path Traversal 수정** (DownloadFile.java, ReadFile.java)
+   - PathValidator 구현
+   - Canonical path 검증
+
+3. [ ] **토큰 로깅 제거** (Common.java:268, 317)
+   - refresh_token, access_token 로깅 삭제
+   - 민감 정보 노출 방지
+
+4. [ ] **동시성 버그 수정**
+   - MwConsumerThread.java:83 - 논리 연산자 수정
+   - SuckSyperFunc.java:63 - null 체크 수정
+
+#### 참고 문서
+- `REFACTORING_PLAN.md` - 전체 리팩토링 계획
+- Phase 2 상세 내용: REFACTORING_PLAN.md:132-257
+
+---
+
+## 2025-01-23 (이전 작업)
 
 ### 작업 브랜치
 - `refectoring_202511` 브랜치에서 작업

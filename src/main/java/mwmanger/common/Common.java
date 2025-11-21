@@ -325,6 +325,10 @@ public class Common {
     }
 
     public static String escape(String raw) {
+        if (raw == null) {
+            return null;
+        }
+
         String escaped = raw;
         escaped = escaped.replace("\\", "\\\\");
         escaped = escaped.replace("\"", "\\\"");

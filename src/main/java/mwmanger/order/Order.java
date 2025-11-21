@@ -30,6 +30,14 @@ public abstract class Order {
 		convertCommand(command);
 	}
 
+	public CommandVO getCommandVo() {
+		return commandVo;
+	}
+
+	public ResultVO getResultVo() {
+		return resultVo;
+	}
+
 	public abstract int execute();
 
 	public void sendResults() throws IOException{
