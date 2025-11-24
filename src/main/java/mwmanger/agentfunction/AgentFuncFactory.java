@@ -23,7 +23,6 @@ public class AgentFuncFactory {
 			case "get_ssl_certi" : return new SSLCertiFunc();
 			case "get_ssl_certifile" : return new SSLCertiFileFunc();
 			case "download_n_unzip" : return new  DownloadNUnzipFunc();
-			case "read_all_from_syper" : return new SuckSyperFunc();
 			default:
 		    	try {
 		    		Class<?> agentFunc = Class.forName(functionType);

@@ -57,16 +57,6 @@ class AgentFuncFactoryTest {
     }
 
     @Test
-    void testGetAgentFuncSuckSyperFunc() {
-        // When
-        AgentFunc func = AgentFuncFactory.getAgentFunc("read_all_from_syper");
-
-        // Then
-        assertThat(func).isNotNull();
-        assertThat(func).isInstanceOf(SuckSyperFunc.class);
-    }
-
-    @Test
     void testGetAgentFuncUnknownType() {
         // When - Invalid function type
         AgentFunc func = AgentFuncFactory.getAgentFunc("unknown_function_type");
