@@ -353,21 +353,30 @@ public class Common {
 
         int rtn = 0;
 
-        String path =  "/api/v1/security/refresh";
-        config.getLogger().fine("updateToken uri : "+path);
+        // OAuth2 Token Endpoint
+        String path =  "/oauth2/token";
+        config.getLogger().info("OAuth2 refresh_token grant: " + path);
 
-		MwResponseVO mrvo = Common.httpPOST(path, config.getRefresh_token(), "");
+		// OAuth2 standard: application/x-www-form-urlencoded
+		String body = "grant_type=refresh_token&refresh_token=" + config.getRefresh_token();
 
-		config.getLogger().fine("updateToken response code : "+Integer.toString(mrvo.getStatusCode()));
+		MwResponseVO mrvo = Common.httpPOST(path, "", body);
+
+		config.getLogger().fine("OAuth2 token response code: " + Integer.toString(mrvo.getStatusCode()));
 
         if (mrvo.getResponse() != null) {
 
         	String access_token = (String)mrvo.getResponse().get("access_token");
+        	String token_type = (String)mrvo.getResponse().get("token_type");
+        	Long expires_in = (Long)mrvo.getResponse().get("expires_in");
+        	String scope = (String)mrvo.getResponse().get("scope");
+
         	config.setAccess_token(access_token);
-        	config.getLogger().fine("access_token :"+access_token);
+        	config.getLogger().info("OAuth2 access_token received (type=" + token_type + ", expires_in=" + expires_in + ", scope=" + scope + ")");
             rtn = 1;
 
         }else{
+        	config.getLogger().warning("OAuth2 token response is null");
         	rtn = -1;
     	}
 
@@ -393,20 +402,27 @@ public class Common {
 
 		int rtn = 0;
 
-		String path = "/api/v1/security/token/renew";
+		// OAuth2 Token Endpoint with client_credentials grant
+		String path = "/oauth2/token";
 		String url = config.getServer_url() + path;
 
-		config.getLogger().info("Renewing access token with mTLS: " + url);
+		config.getLogger().info("OAuth2 client_credentials grant (mTLS): " + url);
 
 		try {
 			HttpPost request = new HttpPost(url);
-			request.addHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+
+			// OAuth2 standard: application/x-www-form-urlencoded
+			request.addHeader(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded");
+
+			// OAuth2 client_credentials grant
+			String body = "grant_type=client_credentials";
+			request.setEntity(new StringEntity(body));
 
 			HttpResponse response = mtlsHttpClient.execute(request);
 			HttpEntity entity = response.getEntity();
 
 			int statusCode = response.getStatusLine().getStatusCode();
-			config.getLogger().fine("renewAccessTokenWithMtls response code: " + statusCode);
+			config.getLogger().fine("OAuth2 client_credentials response code: " + statusCode);
 
 			if (statusCode == 200 && entity != null) {
 				String value = EntityUtils.toString(entity);
@@ -423,15 +439,20 @@ public class Common {
 
 				if (jsonObj != null) {
 					String access_token = (String) jsonObj.get("access_token");
+					String token_type = (String) jsonObj.get("token_type");
+					Long expires_in = (Long) jsonObj.get("expires_in");
+					String scope = (String) jsonObj.get("scope");
+
 					config.setAccess_token(access_token);
-					config.getLogger().info("Access token renewed successfully with mTLS");
+					config.getLogger().info("OAuth2 access_token received via mTLS (type=" + token_type +
+							", expires_in=" + expires_in + ", scope=" + scope + ")");
 					rtn = 1;
 				} else {
 					rtn = -4;
 				}
 
 			} else {
-				config.getLogger().severe("Token renewal failed with status: " + statusCode);
+				config.getLogger().severe("OAuth2 token request failed with status: " + statusCode);
 				rtn = -5;
 			}
 
@@ -439,7 +460,7 @@ public class Common {
 			config.getLogger().log(Level.WARNING, "HTTP execution failed: " + url, e);
 			rtn = -6;
 		} catch (Exception e) {
-			config.getLogger().log(Level.WARNING, "mTLS token renewal failed", e);
+			config.getLogger().log(Level.WARNING, "OAuth2 mTLS token request failed", e);
 			rtn = -7;
 		}
 
