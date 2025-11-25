@@ -1,0 +1,40 @@
+# MwManger Agent Configuration
+# Version: 0000.0009.0001
+# Copy this file to agent.properties and configure for your environment
+
+# Server Configuration
+server_url=http://localhost:8080
+get_command_uri=/api/commands
+post_agent_uri=/api/agents
+
+# Authentication - Refresh Token Method
+token=your_refresh_token_here
+
+# mTLS Configuration (OAuth2 Client Credentials Grant)
+# Set use_mtls=true to enable certificate-based authentication
+# When enabled, agent authenticates using client certificate instead of refresh token
+use_mtls=false
+client.keystore.path=
+client.keystore.password=
+truststore.path=
+truststore.password=
+
+# Example mTLS configuration for test environment:
+# use_mtls=true
+# server_url=https://localhost:8443
+# client.keystore.path=./test-server/certs/agent-test001.p12
+# client.keystore.password=agent-password
+# truststore.path=./test-server/certs/truststore.jks
+# truststore.password=changeit
+
+# Kafka Configuration
+kafka_broker_address=localhost:9092
+
+# Agent Configuration
+command_check_cycle=60
+host_name_var=HOSTNAME
+user_name_var=USER
+
+# Logging Configuration
+log_dir=./logs
+log_level=INFO

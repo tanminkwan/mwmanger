@@ -72,3 +72,8 @@ sources.txt
 
 # Claude Code
 .claude/
+
+# Test Server
+test-server/certs/
+test-server/*.pid
+test-server/*.log
