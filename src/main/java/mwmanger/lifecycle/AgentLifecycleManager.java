@@ -187,8 +187,14 @@ public class AgentLifecycleManager implements AgentLifecycle {
                 }
             }
 
-            // Refresh token
-            Common.applyRefreshToken();
+            // Initialize mTLS client if enabled, otherwise use refresh token
+            if (getConfig().isUseMtls()) {
+                logger.info("mTLS enabled - initializing mTLS client");
+                Common.createMtlsClient();
+            } else {
+                logger.info("mTLS disabled - using refresh token method");
+                Common.applyRefreshToken();
+            }
         }
     }
 
@@ -206,7 +212,20 @@ public class AgentLifecycleManager implements AgentLifecycle {
                 // Handle token expiration
                 if (rcv.getReturnCode() == 0) {
                     logger.info("Access token expired, refreshing...");
-                    Common.updateToken();
+
+                    int result;
+                    if (getConfig().isUseMtls()) {
+                        logger.info("Using mTLS method to renew token");
+                        result = Common.renewAccessTokenWithMtls();
+                    } else {
+                        logger.info("Using refresh token method");
+                        result = Common.updateToken();
+                    }
+
+                    if (result < 0) {
+                        logger.warning("Token renewal failed with code: " + result);
+                    }
+
                     continue;
                 }
 

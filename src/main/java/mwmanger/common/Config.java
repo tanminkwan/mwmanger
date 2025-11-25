@@ -46,7 +46,14 @@ public final class Config {
 	private String refresh_token = "";
 	private String kafka_broker_address = "";
 	private long command_check_cycle = 60;
-	
+
+	// mTLS Configuration
+	private boolean use_mtls = false;
+	private String client_keystore_path = "";
+	private String client_keystore_password = "";
+	private String truststore_path = "";
+	private String truststore_password = "";
+
 	private Logger logger;
 	
 	private String os = "";	
@@ -146,6 +153,38 @@ public final class Config {
 		this.command_check_cycle = command_check_cycle;
 	}
 
+	// mTLS getters and setters
+	public boolean isUseMtls() {
+		return use_mtls;
+	}
+	public void setUseMtls(boolean use_mtls) {
+		this.use_mtls = use_mtls;
+	}
+	public String getClientKeystorePath() {
+		return client_keystore_path;
+	}
+	public void setClientKeystorePath(String client_keystore_path) {
+		this.client_keystore_path = client_keystore_path;
+	}
+	public String getClientKeystorePassword() {
+		return client_keystore_password;
+	}
+	public void setClientKeystorePassword(String client_keystore_password) {
+		this.client_keystore_password = client_keystore_password;
+	}
+	public String getTruststorePath() {
+		return truststore_path;
+	}
+	public void setTruststorePath(String truststore_path) {
+		this.truststore_path = truststore_path;
+	}
+	public String getTruststorePassword() {
+		return truststore_password;
+	}
+	public void setTruststorePassword(String truststore_password) {
+		this.truststore_password = truststore_password;
+	}
+
     public long setConfig() {
 
 		Properties prop = new Properties();
@@ -176,7 +215,14 @@ public final class Config {
 			setGet_command_uri(get_command_uri);
 			setPost_agent_uri(post_agent_uri);
 			setKafka_broker_address(prop.getProperty("kafka_broker_address", ""));
-			
+
+			// mTLS Configuration
+			setUseMtls(Boolean.parseBoolean(prop.getProperty("use_mtls", "false")));
+			setClientKeystorePath(prop.getProperty("client.keystore.path", ""));
+			setClientKeystorePassword(prop.getProperty("client.keystore.password", ""));
+			setTruststorePath(prop.getProperty("truststore.path", ""));
+			setTruststorePassword(prop.getProperty("truststore.password", ""));
+
 			//Create Logger
 			Logger logger = Logger.getLogger("Hennry");
 			logger.setLevel(Level.parse(log_level));

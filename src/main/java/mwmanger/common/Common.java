@@ -1,9 +1,11 @@
 package mwmanger.common;
 
+import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.security.KeyManagementException;
+import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.Security;
@@ -38,6 +40,7 @@ public class Common {
 	
 	private static CloseableHttpClient httpClient = null;
 	private static CloseableHttpClient httpsClient = null;
+	private static CloseableHttpClient mtlsHttpClient = null;
 	private static Config config = Config.getConfig();
 	
 	public static ArrayList<ResultVO> makeOneResultArray(ResultVO rv, CommandVO command){
@@ -94,9 +97,56 @@ public class Common {
 	                .setSSLSocketFactory(sslScoketFactory)
 	                .build();
 	    
-	    // 4. http 
+	    // 4. http
 	    httpClient = HttpClients.createDefault();
-    	
+
+    }
+
+    public static void createMtlsClient() {
+
+    	if (!config.isUseMtls()) {
+    		config.getLogger().info("mTLS is disabled, skipping mTLS client creation");
+    		return;
+    	}
+
+    	config.getLogger().info("Creating mTLS client with client certificate...");
+
+    	try {
+    		// 1. Load client keystore (contains client certificate and private key)
+    		KeyStore keyStore = KeyStore.getInstance("PKCS12");
+    		FileInputStream keystoreStream = new FileInputStream(config.getClientKeystorePath());
+    		keyStore.load(keystoreStream, config.getClientKeystorePassword().toCharArray());
+    		keystoreStream.close();
+
+    		// 2. Load truststore (contains server CA certificate)
+    		KeyStore trustStore = KeyStore.getInstance("JKS");
+    		FileInputStream truststoreStream = new FileInputStream(config.getTruststorePath());
+    		trustStore.load(truststoreStream, config.getTruststorePassword().toCharArray());
+    		truststoreStream.close();
+
+    		// 3. Create SSLContext with client key material (mTLS)
+    		SSLContext sslContext = SSLContexts.custom()
+    				.setProtocol("TLSv1.2")
+    				.loadKeyMaterial(keyStore, config.getClientKeystorePassword().toCharArray())
+    				.loadTrustMaterial(trustStore, null)
+    				.build();
+
+    		// 4. Create mTLS HttpClient
+    		SSLConnectionSocketFactory sslSocketFactory = new SSLConnectionSocketFactory(
+    				sslContext,
+    				NoopHostnameVerifier.INSTANCE
+    		);
+
+    		mtlsHttpClient = HttpClients.custom()
+    				.setSSLSocketFactory(sslSocketFactory)
+    				.build();
+
+    		config.getLogger().info("mTLS client created successfully");
+
+    	} catch (Exception e) {
+    		config.getLogger().log(Level.SEVERE, "Failed to create mTLS client", e);
+    		throw new RuntimeException("mTLS client creation failed", e);
+    	}
     }
 
     public static MwResponseVO httpPOST(String path, String token, String data) {
@@ -302,27 +352,99 @@ public class Common {
 	public static int updateToken() {
 
         int rtn = 0;
-        
+
         String path =  "/api/v1/security/refresh";
         config.getLogger().fine("updateToken uri : "+path);
-        
+
 		MwResponseVO mrvo = Common.httpPOST(path, config.getRefresh_token(), "");
-		
+
 		config.getLogger().fine("updateToken response code : "+Integer.toString(mrvo.getStatusCode()));
-            
+
         if (mrvo.getResponse() != null) {
-            
+
         	String access_token = (String)mrvo.getResponse().get("access_token");
         	config.setAccess_token(access_token);
         	config.getLogger().fine("access_token :"+access_token);
             rtn = 1;
-            
+
         }else{
         	rtn = -1;
     	}
-        
+
         return rtn;
     }
+
+	public static int renewAccessTokenWithMtls() {
+
+		if (!config.isUseMtls()) {
+			config.getLogger().warning("mTLS is not enabled, cannot renew token with mTLS");
+			return -1;
+		}
+
+		if (mtlsHttpClient == null) {
+			config.getLogger().warning("mTLS client not initialized, creating now...");
+			try {
+				createMtlsClient();
+			} catch (Exception e) {
+				config.getLogger().log(Level.SEVERE, "Failed to create mTLS client", e);
+				return -2;
+			}
+		}
+
+		int rtn = 0;
+
+		String path = "/api/v1/security/token/renew";
+		String url = config.getServer_url() + path;
+
+		config.getLogger().info("Renewing access token with mTLS: " + url);
+
+		try {
+			HttpPost request = new HttpPost(url);
+			request.addHeader(HttpHeaders.CONTENT_TYPE, "application/json");
+
+			HttpResponse response = mtlsHttpClient.execute(request);
+			HttpEntity entity = response.getEntity();
+
+			int statusCode = response.getStatusLine().getStatusCode();
+			config.getLogger().fine("renewAccessTokenWithMtls response code: " + statusCode);
+
+			if (statusCode == 200 && entity != null) {
+				String value = EntityUtils.toString(entity);
+
+				JSONParser jsonPar = new JSONParser();
+				JSONObject jsonObj = null;
+
+				try {
+					jsonObj = (JSONObject) jsonPar.parse(value);
+				} catch (ParseException e) {
+					config.getLogger().warning("JSON Parsing Error data: " + value);
+					return -3;
+				}
+
+				if (jsonObj != null) {
+					String access_token = (String) jsonObj.get("access_token");
+					config.setAccess_token(access_token);
+					config.getLogger().info("Access token renewed successfully with mTLS");
+					rtn = 1;
+				} else {
+					rtn = -4;
+				}
+
+			} else {
+				config.getLogger().severe("Token renewal failed with status: " + statusCode);
+				rtn = -5;
+			}
+
+		} catch (IOException e) {
+			config.getLogger().log(Level.WARNING, "HTTP execution failed: " + url, e);
+			rtn = -6;
+		} catch (Exception e) {
+			config.getLogger().log(Level.WARNING, "mTLS token renewal failed", e);
+			rtn = -7;
+		}
+
+		return rtn;
+	}
 
     public static String escape(String raw) {
         if (raw == null) {
