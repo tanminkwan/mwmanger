@@ -209,21 +209,15 @@ public class AgentLifecycleManager implements AgentLifecycle {
                 // Poll commands from server
                 RawCommandsVO rcv = pollCommands();
 
-                // Handle token expiration
+                // Handle token expiration - use cascading fallback strategy
                 if (rcv.getReturnCode() == 0) {
-                    logger.info("Access token expired, refreshing...");
+                    logger.info("Access token expired, starting cascading token renewal...");
 
-                    int result;
-                    if (getConfig().isUseMtls()) {
-                        logger.info("Using mTLS method to renew token");
-                        result = Common.renewAccessTokenWithMtls();
-                    } else {
-                        logger.info("Using refresh token method");
-                        result = Common.updateToken();
-                    }
+                    // Cascading strategy: refresh_token -> mTLS (if enabled)
+                    int result = Common.renewAccessTokenWithFallback();
 
                     if (result < 0) {
-                        logger.warning("Token renewal failed with code: " + result);
+                        logger.severe("All token renewal methods failed with code: " + result);
                     }
 
                     continue;

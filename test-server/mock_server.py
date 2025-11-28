@@ -25,13 +25,22 @@ AGENTS_DB = {
         "agent_id": "agent-test001",
         "refresh_token": "refresh-token-test001",
         "status": "active",
-        "scope": "agent:commands agent:results"
+        "scope": "agent:commands agent:results",
+        "refresh_token_expired": False  # Toggle for testing cascading fallback
     },
     "agent-test002": {
         "agent_id": "agent-test002",
         "refresh_token": "refresh-token-test002",
         "status": "active",
-        "scope": "agent:commands agent:results"
+        "scope": "agent:commands agent:results",
+        "refresh_token_expired": False
+    },
+    "agent-test003-expired": {
+        "agent_id": "agent-test003-expired",
+        "refresh_token": "refresh-token-test003-expired",
+        "status": "active",
+        "scope": "agent:commands agent:results",
+        "refresh_token_expired": True  # Always expired - for testing mTLS fallback
     }
 }
 
@@ -160,6 +169,14 @@ def handle_refresh_token_grant():
         return jsonify({
             "error": "invalid_grant",
             "error_description": "Invalid refresh token"
+        }), 401
+
+    # Check if refresh token is marked as expired (for testing cascading fallback)
+    if agent.get('refresh_token_expired', False):
+        print(f"[OAuth2] refresh_token grant: EXPIRED for {agent['agent_id']} - should fallback to mTLS")
+        return jsonify({
+            "error": "invalid_grant",
+            "error_description": "Refresh token has expired"
         }), 401
 
     # Generate new access token
@@ -379,6 +396,60 @@ def get_commands(agent_id):
 def health():
     """Health check endpoint"""
     return jsonify({"status": "ok"}), 200
+
+
+# ==================== Test Control Endpoints ====================
+
+@app.route('/test/expire-refresh-token/<agent_id>', methods=['POST'])
+def expire_refresh_token(agent_id):
+    """
+    TEST ENDPOINT: Mark an agent's refresh token as expired.
+    This simulates refresh token expiration to test cascading fallback to mTLS.
+    """
+    if agent_id not in AGENTS_DB:
+        return jsonify({"error": f"Agent {agent_id} not found"}), 404
+
+    AGENTS_DB[agent_id]['refresh_token_expired'] = True
+    print(f"[TEST] Agent {agent_id} refresh_token marked as EXPIRED")
+
+    return jsonify({
+        "message": f"Refresh token for {agent_id} marked as expired",
+        "agent_id": agent_id,
+        "refresh_token_expired": True
+    }), 200
+
+
+@app.route('/test/restore-refresh-token/<agent_id>', methods=['POST'])
+def restore_refresh_token(agent_id):
+    """
+    TEST ENDPOINT: Restore an agent's refresh token to valid state.
+    """
+    if agent_id not in AGENTS_DB:
+        return jsonify({"error": f"Agent {agent_id} not found"}), 404
+
+    AGENTS_DB[agent_id]['refresh_token_expired'] = False
+    print(f"[TEST] Agent {agent_id} refresh_token RESTORED to valid")
+
+    return jsonify({
+        "message": f"Refresh token for {agent_id} restored to valid",
+        "agent_id": agent_id,
+        "refresh_token_expired": False
+    }), 200
+
+
+@app.route('/test/agent-status', methods=['GET'])
+def get_agent_status():
+    """
+    TEST ENDPOINT: Get status of all agents including refresh_token_expired flag.
+    """
+    status = {}
+    for agent_id, agent in AGENTS_DB.items():
+        status[agent_id] = {
+            "status": agent['status'],
+            "refresh_token_expired": agent.get('refresh_token_expired', False)
+        }
+
+    return jsonify(status), 200
 
 
 # ==================== Server Configuration ====================

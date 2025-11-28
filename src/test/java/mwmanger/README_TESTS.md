@@ -9,15 +9,35 @@ src/test/java/
 ├── mwmanger/
 │   ├── vo/                    # Value Object 테스트
 │   │   ├── CommandVOTest.java
-│   │   └── ResultVOTest.java
+│   │   ├── ResultVOTest.java
+│   │   ├── AgentStatusTest.java
+│   │   ├── RegistrationRequestTest.java
+│   │   └── RegistrationResponseTest.java
 │   ├── common/                # 공통 유틸리티 테스트
-│   │   └── CommonTest.java
+│   │   ├── CommonTest.java
+│   │   ├── CommonMtlsTest.java         # mTLS 클라이언트 테스트
+│   │   ├── ConfigMtlsTest.java         # mTLS 설정 테스트
+│   │   └── CascadingTokenRenewalTest.java # ★ 계단식 토큰 갱신 테스트
+│   ├── lifecycle/             # Lifecycle 테스트
+│   │   ├── LifecycleStateTest.java
+│   │   ├── GracefulShutdownHandlerTest.java
+│   │   └── AgentLifecycleManagerMtlsTest.java
+│   ├── service/               # Service 테스트
+│   │   ├── CommandExecutorServiceTest.java
+│   │   └── registration/
+│   │       ├── BootstrapServiceTest.java
+│   │       └── RegistrationServiceTest.java
+│   ├── integration/           # 통합 테스트
+│   │   └── MtlsTokenRenewalIntegrationTest.java # ★ mTLS + 계단식 갱신 통합 테스트
 │   ├── order/                 # Order 클래스 테스트
-│   │   └── OrderTest.java
+│   │   ├── OrderTest.java
+│   │   └── ExeShellTest.java
 │   └── agentfunction/         # AgentFunc 테스트
 │       └── AgentFuncFactoryTest.java
 └── README_TESTS.md
 ```
+
+**★ = Phase 1.5에서 추가된 테스트**
 
 ## 테스트 실행 방법
 
@@ -55,9 +75,30 @@ gradle test --tests "mwmanger.vo.*"
 |---------|-------------|------|
 | CommandVO | CommandVOTest | 명령 VO의 getter/setter 및 toString 테스트 |
 | ResultVO | ResultVOTest | 결과 VO의 getter/setter 및 toString 테스트 |
+| AgentStatus | AgentStatusTest | Agent 상태 enum 테스트 |
 | Common | CommonTest | escape, fillResult, makeOneResultArray 메서드 테스트 |
+| Common (mTLS) | CommonMtlsTest | mTLS 클라이언트 생성 테스트 |
+| Config (mTLS) | ConfigMtlsTest | mTLS 설정 저장 테스트 |
+| **Cascading Token** | **CascadingTokenRenewalTest** | **계단식 토큰 갱신 전략 테스트** |
 | Order | OrderTest | 추상 Order 클래스의 공통 기능 테스트 (replaceParam, getHash) |
 | AgentFuncFactory | AgentFuncFactoryTest | Factory 패턴 및 각 AgentFunc 생성 테스트 |
+| LifecycleState | LifecycleStateTest | 상태 전이 테스트 |
+| GracefulShutdown | GracefulShutdownHandlerTest | Graceful shutdown 테스트 |
+| **mTLS Integration** | **MtlsTokenRenewalIntegrationTest** | **mTLS + 계단식 갱신 통합 테스트** |
+
+### Phase 1.5 신규 테스트
+
+| 테스트 클래스 | 테스트 케이스 | 설명 |
+|-------------|-------------|------|
+| CascadingTokenRenewalTest | 5개 | 계단식 토큰 갱신 단위 테스트 |
+| MtlsTokenRenewalIntegrationTest | 8개 | mTLS + OAuth2 통합 테스트 |
+
+**계단식 토큰 갱신 테스트 시나리오:**
+1. `testUpdateTokenReturnsNegative401OnExpiredRefreshToken` - refresh_token 만료 시 -401 반환
+2. `testFallbackReturnsErrorWhenMtlsDisabledAndRefreshTokenExpired` - mTLS 비활성화 시 fallback 불가
+3. `testRenewAccessTokenWithMtlsReturnsNegativeWhenDisabled` - mTLS 비활성화 시 -1 반환
+4. `testMtlsConfigurationStorage` - mTLS 설정 저장 검증
+5. `testCascadingStrategyConceptualFlow` - 계단식 전략 흐름 검증
 
 ### 테스트 프레임워크
 
@@ -212,7 +253,33 @@ open build/reports/tests/test/index.html
 - [ ] 개별 Order 구현체 (ExeShell, ReadFile 등)
 - [ ] 개별 AgentFunc 구현체
 - [ ] Kafka 관련 클래스 (통합 테스트)
-- [ ] HTTP 통신 관련 클래스 (통합 테스트)
+- [x] ~~HTTP 통신 관련 클래스 (통합 테스트)~~ - MtlsTokenRenewalIntegrationTest로 커버
+- [x] ~~mTLS 토큰 갱신~~ - Phase 1.5에서 완료
+- [x] ~~계단식 토큰 갱신~~ - Phase 1.5에서 완료
+
+## 통합 테스트 실행
+
+통합 테스트는 환경 변수 설정이 필요합니다:
+
+```bash
+# 환경 변수 설정
+export MTLS_INTEGRATION_TEST=true
+
+# 테스트 서버 실행 (다른 터미널에서)
+cd test-server
+python mock_server.py --ssl
+
+# 통합 테스트 실행
+mvn test -Dtest=MtlsTokenRenewalIntegrationTest
+```
+
+### 계단식 토큰 갱신 통합 테스트
+
+`MtlsTokenRenewalIntegrationTest`에서 다음 시나리오를 테스트합니다:
+
+1. **유효한 refresh_token**: refresh_token으로 갱신 성공
+2. **만료된 refresh_token + mTLS 활성화**: mTLS로 fallback하여 성공
+3. **만료된 refresh_token + mTLS 비활성화**: -401 에러 반환
 
 ## 참고 자료
 
@@ -222,5 +289,7 @@ open build/reports/tests/test/index.html
 
 ---
 
-**Last Updated**: 2025-01-23
+**Last Updated**: 2025-11-28
 **Test Framework**: JUnit 5.8.2
+**Total Tests**: 127 (1 skipped - integration test without env var)
+**Phase**: 1.5 - mTLS & Cascading Token Renewal

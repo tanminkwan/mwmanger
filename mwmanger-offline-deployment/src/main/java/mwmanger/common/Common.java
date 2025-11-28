@@ -364,7 +364,7 @@ public class Common {
 
 		config.getLogger().fine("OAuth2 token response code: " + Integer.toString(mrvo.getStatusCode()));
 
-        if (mrvo.getResponse() != null) {
+        if (mrvo.getStatusCode() == 200 && mrvo.getResponse() != null) {
 
         	String access_token = (String)mrvo.getResponse().get("access_token");
         	String token_type = (String)mrvo.getResponse().get("token_type");
@@ -375,13 +375,63 @@ public class Common {
         	config.getLogger().info("OAuth2 access_token received (type=" + token_type + ", expires_in=" + expires_in + ", scope=" + scope + ")");
             rtn = 1;
 
-        }else{
-        	config.getLogger().warning("OAuth2 token response is null");
+        } else if (mrvo.getStatusCode() == 401) {
+        	// Refresh token expired or invalid
+        	config.getLogger().warning("OAuth2 refresh_token expired or invalid (401)");
+        	rtn = -401;
+
+        } else {
+        	config.getLogger().warning("OAuth2 token response error: " + mrvo.getStatusCode());
         	rtn = -1;
     	}
 
         return rtn;
     }
+
+	/**
+	 * Cascading token renewal strategy:
+	 * 1. Try refresh_token grant first
+	 * 2. If refresh_token expired (401), fallback to mTLS client_credentials grant
+	 *
+	 * @return 1 on success, negative value on failure
+	 */
+	public static int renewAccessTokenWithFallback() {
+
+		config.getLogger().info("=== Cascading Token Renewal ===");
+
+		// Step 1: Try refresh_token grant
+		config.getLogger().info("Step 1: Attempting refresh_token grant...");
+		int result = updateToken();
+
+		if (result == 1) {
+			config.getLogger().info("Token renewed successfully via refresh_token");
+			return 1;
+		}
+
+		// Step 2: If refresh_token expired, try mTLS
+		if (result == -401 && config.isUseMtls()) {
+			config.getLogger().info("Step 2: refresh_token expired, attempting mTLS client_credentials grant...");
+
+			result = renewAccessTokenWithMtls();
+
+			if (result == 1) {
+				config.getLogger().info("Token renewed successfully via mTLS client_credentials");
+				return 1;
+			} else {
+				config.getLogger().severe("mTLS token renewal failed with code: " + result);
+				return result;
+			}
+		}
+
+		// mTLS not enabled or other error
+		if (result == -401 && !config.isUseMtls()) {
+			config.getLogger().severe("refresh_token expired and mTLS is not enabled - cannot renew token");
+			return -401;
+		}
+
+		config.getLogger().severe("Token renewal failed with code: " + result);
+		return result;
+	}
 
 	public static int renewAccessTokenWithMtls() {
 

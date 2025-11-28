@@ -1,14 +1,17 @@
 # Mock Server for mTLS Token Renewal Testing
 
-Python Flask 기반 목업 서버로, mTLS 인증과 기존 refresh token 방식을 모두 지원합니다.
+Python Flask 기반 OAuth2 인증 서버로, mTLS 인증과 기존 refresh token 방식을 모두 지원합니다.
+**RFC 6749 (OAuth 2.0)** 및 **RFC 8705 (OAuth 2.0 Mutual-TLS)** 표준을 준수합니다.
 
 ## Features
 
-- **두 가지 인증 방식 지원**:
-  1. **Refresh Token 방식** (기존): JWT refresh token으로 access token 갱신
-  2. **mTLS 방식** (신규): Client certificate의 CN으로 access token 갱신
+- **OAuth2 표준 토큰 엔드포인트**: `/oauth2/token`
+- **두 가지 Grant Type 지원**:
+  1. **refresh_token**: refresh token으로 access token 갱신
+  2. **client_credentials + mTLS**: 클라이언트 인증서로 access token 발급
 
-- **Mock Agent Database**: 테스트용 agent 정보 포함
+- **계단식 토큰 갱신 테스트**: refresh_token 만료 시나리오 시뮬레이션
+- **Mock Agent Database**: 테스트용 agent 정보 포함 (만료된 토큰 포함)
 - **Certificate 자동 생성**: 스크립트로 CA, 서버, 클라이언트 인증서 생성
 
 ## Prerequisites
@@ -68,9 +71,68 @@ python mock_server.py
 
 ## API Endpoints
 
-### Authentication Endpoints
+### OAuth2 Token Endpoint (RFC 6749)
 
-#### 1. Refresh Token 방식 (기존)
+**POST /oauth2/token** - 모든 토큰 발급/갱신 요청 처리
+
+#### 1. refresh_token Grant
+
+refresh_token으로 새 access_token을 발급받습니다.
+
+```
+POST /oauth2/token
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=refresh_token&refresh_token=refresh-token-test001
+
+Response (성공):
+{
+  "access_token": "eyJ0eXAiOiJKV1QiLCJh...",
+  "token_type": "Bearer",
+  "expires_in": 1800,
+  "scope": "agent:commands agent:results"
+}
+
+Response (만료된 refresh_token):
+HTTP 401
+{
+  "error": "invalid_grant",
+  "error_description": "Refresh token has expired"
+}
+```
+
+#### 2. client_credentials Grant (mTLS)
+
+mTLS 클라이언트 인증서로 access_token을 발급받습니다.
+
+```
+POST /oauth2/token
+Content-Type: application/x-www-form-urlencoded
+[Client certificate required - CN=agent_id]
+
+grant_type=client_credentials
+
+Response:
+{
+  "access_token": "eyJ0eXAiOiJKV1QiLCJh...",
+  "token_type": "Bearer",
+  "expires_in": 1800,
+  "scope": "agent:commands agent:results"
+}
+```
+
+서버는 client certificate의 CN에서 agent_id를 추출하여 검증합니다.
+
+### Legacy Endpoints (Backward Compatibility)
+
+⚠️ **Deprecated** - OAuth2 표준 엔드포인트 사용 권장
+
+| Endpoint | 대체 방법 |
+|----------|----------|
+| `POST /api/v1/security/refresh` | `/oauth2/token` + `grant_type=refresh_token` |
+| `POST /api/v1/security/token/renew` | `/oauth2/token` + `grant_type=client_credentials` |
+
+### Agent Info Endpoint
 
 **Get Refresh Token:**
 ```
@@ -83,37 +145,6 @@ Response:
   "agent_id": "agent-test001"
 }
 ```
-
-**Refresh Access Token:**
-```
-POST /api/v1/security/refresh
-Authorization: Bearer <refresh_token>
-
-Response:
-{
-  "access_token": "eyJ0eXAiOiJKV1QiLCJh...",
-  "expires_in": 1800,
-  "token_type": "Bearer"
-}
-```
-
-#### 2. mTLS 방식 (신규)
-
-**Renew Access Token with mTLS:**
-```
-POST /api/v1/security/token/renew
-[Client certificate required]
-
-Response:
-{
-  "access_token": "eyJ0eXAiOiJKV1QiLCJh...",
-  "expires_in": 1800,
-  "token_type": "Bearer",
-  "method": "mTLS"
-}
-```
-
-서버는 client certificate의 CN에서 agent_id를 추출하여 검증합니다.
 
 ### Test Endpoints
 
@@ -152,37 +183,103 @@ Response:
 }
 ```
 
+### Test Control Endpoints (계단식 토큰 갱신 테스트용)
+
+refresh_token 만료 상태를 동적으로 제어하여 계단식 토큰 갱신을 테스트할 수 있습니다.
+
+**Expire Refresh Token:**
+```
+POST /test/expire-refresh-token/<agent_id>
+
+Response:
+{
+  "message": "Refresh token for agent-test001 marked as expired",
+  "agent_id": "agent-test001",
+  "refresh_token_expired": true
+}
+```
+
+**Restore Refresh Token:**
+```
+POST /test/restore-refresh-token/<agent_id>
+
+Response:
+{
+  "message": "Refresh token for agent-test001 restored to valid",
+  "agent_id": "agent-test001",
+  "refresh_token_expired": false
+}
+```
+
+**Get Agent Status:**
+```
+GET /test/agent-status
+
+Response:
+{
+  "agent-test001": {"status": "active", "refresh_token_expired": false},
+  "agent-test002": {"status": "active", "refresh_token_expired": false},
+  "agent-test003-expired": {"status": "active", "refresh_token_expired": true}
+}
+```
+
 ## Mock Agents
 
 서버에는 다음 테스트 agent들이 등록되어 있습니다:
 
-| Agent ID | Refresh Token | Certificate | Status |
-|----------|---------------|-------------|--------|
-| agent-test001 | refresh-token-test001 | agent-test001.p12 | active |
-| agent-test002 | refresh-token-test002 | agent-test002.p12 | active |
+| Agent ID | Refresh Token | Certificate | Status | Token Expired |
+|----------|---------------|-------------|--------|---------------|
+| agent-test001 | refresh-token-test001 | agent-test001.p12 | active | false |
+| agent-test002 | refresh-token-test002 | agent-test002.p12 | active | false |
+| agent-test003-expired | refresh-token-test003-expired | - | active | **true** |
+
+`agent-test003-expired`는 refresh_token이 항상 만료 상태로 설정되어 있어 **계단식 토큰 갱신 (mTLS fallback)** 테스트에 사용됩니다.
 
 ## Testing
 
 ### cURL로 테스트
 
-**1. Refresh Token 방식:**
+**1. OAuth2 refresh_token Grant:**
 ```bash
-# Get refresh token
-curl -X GET http://localhost:8080/api/v1/agent/getRefreshToken/agent-test001 \
-  -H "Authorization: Bearer <initial_access_token>"
-
-# Refresh access token
-curl -X POST http://localhost:8080/api/v1/security/refresh \
-  -H "Authorization: Bearer refresh-token-test001"
+# OAuth2 표준 방식으로 access token 갱신
+curl -X POST http://localhost:8080/oauth2/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=refresh_token&refresh_token=refresh-token-test001"
 ```
 
-**2. mTLS 방식:**
+**2. OAuth2 client_credentials Grant (mTLS):**
 ```bash
-# Renew token with client certificate
-curl -X POST https://localhost:8443/api/v1/security/token/renew \
+# mTLS로 access token 발급
+curl -X POST https://localhost:8443/oauth2/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=client_credentials" \
   --cert ./certs/agent-test001.crt \
   --key ./certs/agent-test001.key \
   --cacert ./certs/ca.crt
+```
+
+**3. 계단식 토큰 갱신 테스트:**
+```bash
+# Step 1: refresh_token 만료 시뮬레이션
+curl -X POST http://localhost:8080/test/expire-refresh-token/agent-test001
+
+# Step 2: refresh_token 갱신 시도 (401 반환됨)
+curl -X POST http://localhost:8080/oauth2/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=refresh_token&refresh_token=refresh-token-test001"
+# {"error": "invalid_grant", "error_description": "Refresh token has expired"}
+
+# Step 3: mTLS로 fallback
+curl -X POST https://localhost:8443/oauth2/token \
+  -H "Content-Type: application/x-www-form-urlencoded" \
+  -d "grant_type=client_credentials" \
+  --cert ./certs/agent-test001.crt \
+  --key ./certs/agent-test001.key \
+  --cacert ./certs/ca.crt
+# 성공!
+
+# Step 4: refresh_token 복구
+curl -X POST http://localhost:8080/test/restore-refresh-token/agent-test001
 ```
 
 ### Java Agent로 테스트

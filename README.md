@@ -36,7 +36,8 @@ MwManger는 분산 환경의 서버 관리를 자동화하기 위한 에이전�
 
 ### Security & Reliability
 - **보안 통신**: TLS 1.2 지원, JWT 기반 인증(Access Token, Refresh Token)
-- **자동 토큰 갱신**: Access Token 만료 시 자동 갱신
+- **mTLS 인증**: 클라이언트 인증서 기반 상호 인증 (RFC 8705)
+- **계단식 토큰 갱신**: refresh_token → mTLS 자동 fallback
 - **상태 관리**: Type-safe state transitions (CREATED → STARTING → RUNNING → STOPPING → STOPPED)
 - **에러 처리**: 포괄적인 예외 처리 및 복구 메커니즘
 
@@ -386,6 +387,13 @@ post_agent_uri=/api/v1/agent
 # 인증 토큰 (Refresh Token)
 token=YOUR_REFRESH_TOKEN_HERE
 
+# mTLS 설정 (선택 사항 - refresh_token 만료 시 fallback으로 사용)
+use_mtls=false
+client.keystore.path=/path/to/agent.p12
+client.keystore.password=your-keystore-password
+truststore.path=/path/to/truststore.jks
+truststore.password=your-truststore-password
+
 # 명령 확인 주기 (초 단위)
 command_check_cycle=60
 
@@ -413,6 +421,13 @@ log_level=INFO
 - **user_name_var**: 사용자명을 가져올 환경 변수명
 - **log_dir**: 로그 파일 저장 경로
 - **log_level**: 로그 레벨 (SEVERE, WARNING, INFO, FINE, FINEST)
+
+#### mTLS 설정 (선택 사항)
+- **use_mtls**: mTLS 활성화 여부 (`true`/`false`)
+- **client.keystore.path**: 클라이언트 인증서 keystore 경로 (PKCS12)
+- **client.keystore.password**: keystore 비밀번호
+- **truststore.path**: 서버 CA 인증서 truststore 경로 (JKS)
+- **truststore.password**: truststore 비밀번호
 
 ## 실행 방법
 
@@ -611,22 +626,59 @@ CREATED ─(start)→ STARTING ─(initialized)→ RUNNING ─(stop)→ STOPPING
 
 **인증 방식**: Bearer Token (JWT)
 
-#### Access Token & Refresh Token
+#### Authentication (인증) - mTLS
+
+mTLS(Mutual TLS)를 통해 에이전트의 신원을 인증서로 증명합니다:
+
+- 클라이언트 인증서(PKCS12)와 개인키를 사용
+- 서버 CA 인증서(truststore)로 서버 검증
+- RFC 8705 (OAuth 2.0 Mutual-TLS Client Authentication) 표준 준수
+
+#### Authorization (인가) - OAuth2
+
+OAuth2 토큰을 통해 API 접근 권한을 관리합니다:
 
 - **Refresh Token**: 장기 유효, `agent.properties`에 저장
-- **Access Token**: 단기 유효, Refresh Token으로 자동 갱신
-- 401 응답 시 자동으로 `Common.updateToken()` 호출
+- **Access Token**: 단기 유효 (OAuth2 `access_token`)
+- 표준 OAuth2 엔드포인트 사용: `/oauth2/token`
+
+#### 계단식 토큰 갱신 (Cascading Token Renewal)
+
+access_token 만료 시 다단계 갱신 전략을 사용합니다:
+
+```
+access_token 만료 (401 응답)
+        ↓
+1. refresh_token grant 시도 (/oauth2/token)
+        ↓
+   성공 → 새 access_token 사용
+        ↓ (실패 - 401: refresh_token 만료)
+2. mTLS client_credentials grant 시도 (mTLS 활성화 시)
+        ↓
+   성공 → 새 access_token 사용
+        ↓ (실패)
+   에러 로그 및 재시도
+```
+
+이 전략은 `Common.renewAccessTokenWithFallback()` 메서드에서 구현됩니다.
 
 #### API 엔드포인트
 
 | 메서드 | 경로 | 설명 |
 |--------|------|------|
-| POST | `/api/v1/security/refresh` | Access Token 갱신 |
+| POST | `/oauth2/token` | OAuth2 토큰 발급/갱신 (RFC 6749) |
 | POST | `/api/v1/agent` | 에이전트 등록 |
 | GET | `/api/v1/command/getCommands/{agent_id}` | 명령 조회 (폴링) |
 | GET | `/api/v1/command/getCommands/{agent_id}/{version}/{type}/BOOT` | 시작 알림 및 BOOT 명령 |
 | GET | `/api/v1/agent/getRefreshToken/{agent_id}` | Refresh Token 조회 |
 | POST | `/api/v1/command/result` | 명령 실행 결과 전송 |
+
+#### OAuth2 Grant Types
+
+| Grant Type | 용도 | 인증 방식 |
+|------------|------|----------|
+| `refresh_token` | access_token 갱신 | refresh_token 파라미터 |
+| `client_credentials` | mTLS 기반 토큰 발급 | 클라이언트 인증서 (mTLS) |
 
 #### TLS 설정
 
@@ -741,10 +793,22 @@ Test Breakdown:
 
 ## 보안 고려사항
 
+### 인증서 및 토큰 보호
+
 1. **Refresh Token 보호**: `agent.properties` 파일 권한을 600으로 설정
-2. **HTTPS 사용**: 중앙 서버와의 통신 시 HTTPS 권장
-3. **Kafka 보안**: 필요 시 SASL/SSL 설정 추가
-4. **명령 검증**: 악의적인 명령 실행 방지를 위한 화이트리스트 관리 권장
+2. **mTLS 인증서 보호**: keystore 파일 권한을 600으로 설정
+3. **비밀번호 관리**: keystore/truststore 비밀번호를 환경변수로 관리 권장
+
+### 통신 보안
+
+4. **HTTPS 사용**: 중앙 서버와의 통신 시 HTTPS 필수 (mTLS 사용 시)
+5. **Kafka 보안**: 필요 시 SASL/SSL 설정 추가
+6. **TLS 버전**: TLS 1.2 이상 사용
+
+### 운영 보안
+
+7. **명령 검증**: 악의적인 명령 실행 방지를 위한 화이트리스트 관리 권장
+8. **인증서 갱신**: mTLS 인증서 만료 전 갱신 계획 수립
 
 ## 확장 방법
 
@@ -801,6 +865,21 @@ public class CustomOrder extends Order {
 - 모든 서비스에 DI 지원으로 테스트 가능
 - 에러 처리 및 상태 관리 개선
 
+### Phase 1.5: mTLS & Cascading Token Renewal (2025-11-28)
+
+**완료 항목:**
+- ✅ mTLS 클라이언트 인증 지원 (`Common.createMtlsClient()`)
+- ✅ OAuth2 표준 토큰 엔드포인트 마이그레이션 (RFC 6749, RFC 8705)
+- ✅ 계단식 토큰 갱신 전략 (`Common.renewAccessTokenWithFallback()`)
+- ✅ Mock 서버 refresh_token 만료 시나리오 지원
+- ✅ 127개 테스트 통과 (21개 신규 추가)
+
+**개선 사항:**
+- Authentication(인증): mTLS 클라이언트 인증서 기반
+- Authorization(인가): OAuth2 access_token 기반
+- refresh_token 만료 시 mTLS로 자동 fallback
+- 테스트 서버에 토큰 만료 시뮬레이션 API 추가
+
 **다음 단계 (Phase 2-3):**
 - TokenRefreshService 분리
 - CommandPollingService 분리
@@ -815,7 +894,7 @@ public class CustomOrder extends Order {
 
 ---
 
-**Last Updated**: 2025-11-21
+**Last Updated**: 2025-11-28
 **Version**: 0000.0009.0001
-**Architecture**: Phase 1 - Lifecycle Management
-**Test Coverage**: 106 tests (100% passing)
+**Architecture**: Phase 1.5 - mTLS & Cascading Token Renewal
+**Test Coverage**: 127 tests (100% passing)
