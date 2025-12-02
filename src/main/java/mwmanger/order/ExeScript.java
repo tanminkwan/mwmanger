@@ -11,24 +11,24 @@ import java.io.UnsupportedEncodingException;
 import java.util.logging.Level;
 
 import org.json.simple.JSONObject;
+import mwmanger.common.SecurityValidator;
 import mwmanger.vo.ResultVO;
 
 public class ExeScript extends Order {
 
 	public ExeScript(JSONObject command) {
 		super(command);
-		// TODO Auto-generated constructor stub
 	}
 
 	public int execute() {
-		
+
 		try {
-			
+
 			resultVo = runScript();
 
 		}catch (Exception e) {
 			e.printStackTrace();
-			getConfig().getLogger().log(Level.SEVERE, e.getMessage(), e);    		
+			getConfig().getLogger().log(Level.SEVERE, e.getMessage(), e);
 		}
 		return 1;
 	}
@@ -36,61 +36,118 @@ public class ExeScript extends Order {
     private ResultVO runScript() {
 
     	String result = "";
-    	String currentPath = System.getProperty("user.dir") + File.separator + commandVo.getTargetFilePath();
-    	
+    	String baseDir = System.getProperty("user.dir");
+    	String targetFilePath = commandVo.getTargetFilePath();
+    	String targetFileName = commandVo.getTargetFileName();
+    	String additionalParams = commandVo.getAdditionalParams();
+
     	ResultVO rv = new ResultVO();
 
     	rv.setOk(false);
 		rv.setHostName(commandVo.getHostName());
-		rv.setTargetFilePath(currentPath);
-		rv.setTargetFileName(commandVo.getTargetFileName());
+		rv.setTargetFilePath(targetFilePath);
+		rv.setTargetFileName(targetFileName);
 
-    	String command = currentPath + commandVo.getTargetFileName() + " " + commandVo.getAdditionalParams();
-    	String[] commands = command.split("\\s+");    	
-    	
+		// Security validation: check path traversal (configurable, default ON)
+		if (getConfig().isSecurityPathTraversalCheck()) {
+			if (!SecurityValidator.isValidPath(baseDir, targetFilePath)) {
+				getConfig().getLogger().severe("Security: Path traversal detected in targetFilePath: " + targetFilePath);
+				rv.setResult("Error:SecurityException - Invalid path");
+				return rv;
+			}
+
+			// Security validation: check filename
+			if (!SecurityValidator.isValidFilename(targetFileName)) {
+				getConfig().getLogger().severe("Security: Invalid filename: " + targetFileName);
+				rv.setResult("Error:SecurityException - Invalid filename");
+				return rv;
+			}
+		}
+
+		// Security validation: check additional params for command injection (configurable, default OFF)
+		if (getConfig().isSecurityCommandInjectionCheck()) {
+			if (!SecurityValidator.isValidCommandParam(additionalParams)) {
+				getConfig().getLogger().severe("Security: Command injection detected in params: " + additionalParams);
+				rv.setResult("Error:SecurityException - Invalid parameters");
+				return rv;
+			}
+		}
+
+		String currentPath;
+		if (getConfig().isSecurityPathTraversalCheck()) {
+			try {
+				currentPath = SecurityValidator.getValidatedPath(baseDir, targetFilePath);
+				if (!currentPath.endsWith(File.separator)) {
+					currentPath += File.separator;
+				}
+			} catch (SecurityException e) {
+				getConfig().getLogger().severe("Security: " + e.getMessage());
+				rv.setResult("Error:SecurityException - " + e.getMessage());
+				return rv;
+			}
+		} else {
+			currentPath = baseDir + File.separator + targetFilePath;
+			if (!currentPath.endsWith(File.separator)) {
+				currentPath += File.separator;
+			}
+		}
+
+		rv.setTargetFilePath(currentPath);
+
+    	String scriptPath = currentPath + targetFileName;
+    	String[] commands;
+
+    	if (additionalParams != null && additionalParams.length() > 0) {
+    		String[] params = additionalParams.split("\\s+");
+    		commands = new String[params.length + 1];
+    		commands[0] = scriptPath;
+    		System.arraycopy(params, 0, commands, 1, params.length);
+    	} else {
+    		commands = new String[]{scriptPath};
+    	}
+
     	try {
-        	
+
     		ProcessBuilder pb = new ProcessBuilder(commands);
     		Process proc = pb.start();
-    		//Process proc = rt.exec(commands);
-    		
+
     		BufferedReader in = new BufferedReader(new InputStreamReader(proc.getInputStream(), "UTF8"));
-    	
+
     		String line = null;
     		String ls = System.getProperty("line.separator");
     		StringBuilder sb = new StringBuilder();
-    		
+
     		while((line=in.readLine())!=null){
     			sb.append(line);
     			sb.append(ls);
     		}
-    		
+
     		result = sb.toString();
         	rv.setOk(true);
         	getConfig().getLogger().info("ExeScript result : "+result);
     		in.close();
-    		
+
     	}catch(UnsupportedEncodingException e){
-    		
-    		getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);    		
+
+    		getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);
     		result = "Error:UnsupportedEncodingException";
-    		
+
     	}catch(FileNotFoundException e){
-    		
-    		getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);    		
-    		result = "Error:FileNotFoundException " + currentPath + commandVo.getTargetFileName();
-    		
+
+    		getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);
+    		result = "Error:FileNotFoundException " + scriptPath;
+
     	}catch(IOException e){
-    		
-    		getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);    		
+
+    		getConfig().getLogger().log(Level.WARNING, e.getMessage(), e);
     		result = "Error:IOException";
-    		
+
     	}
-    	
+
     	rv.setResult(result);
-    	
+
     	return rv;
-    	
+
     }
-    
+
 }

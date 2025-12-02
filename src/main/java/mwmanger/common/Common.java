@@ -37,11 +37,21 @@ import mwmanger.vo.MwResponseVO;
 import mwmanger.vo.ResultVO;
 
 public class Common {
-	
+
 	private static CloseableHttpClient httpClient = null;
 	private static CloseableHttpClient httpsClient = null;
 	private static CloseableHttpClient mtlsHttpClient = null;
 	private static Config config = Config.getConfig();
+
+	/**
+	 * Mask token for secure logging - shows only last 10 characters
+	 */
+	private static String maskToken(String token) {
+		if (token == null || token.length() <= 10) {
+			return "**********";
+		}
+		return token.substring(token.length() - 10);
+	}
 	
 	public static ArrayList<ResultVO> makeOneResultArray(ResultVO rv, CommandVO command){
 		ArrayList<ResultVO> rvs = new ArrayList<ResultVO>();
@@ -315,7 +325,7 @@ public class Common {
         }else if(mrvo.getResponse() != null) {
             	
             String refresh_token = (String)mrvo.getResponse().get("refresh_token");
-            config.getLogger().fine("refresh_token :"+refresh_token);
+            config.getLogger().fine("refresh_token :***" + maskToken(refresh_token));
             config.setRefresh_token(refresh_token);
             rtn = 1;
             
@@ -353,37 +363,65 @@ public class Common {
 
         int rtn = 0;
 
-        // OAuth2 Token Endpoint
-        String path =  "/oauth2/token";
-        config.getLogger().info("OAuth2 refresh_token grant: " + path);
+        // mTLS enabled: use OAuth2 Token Endpoint
+        // mTLS disabled: use legacy endpoint
+        if (config.isUseMtls()) {
+            // OAuth2 Token Endpoint (for mTLS)
+            String path = "/oauth2/token";
+            config.getLogger().info("OAuth2 refresh_token grant: " + path);
 
-		// OAuth2 standard: application/x-www-form-urlencoded
-		String body = "grant_type=refresh_token&refresh_token=" + config.getRefresh_token();
+            // OAuth2 standard: application/x-www-form-urlencoded
+            String body = "grant_type=refresh_token&refresh_token=" + config.getRefresh_token();
 
-		MwResponseVO mrvo = Common.httpPOST(path, "", body);
+            MwResponseVO mrvo = Common.httpPOST(path, "", body);
 
-		config.getLogger().fine("OAuth2 token response code: " + Integer.toString(mrvo.getStatusCode()));
+            config.getLogger().fine("OAuth2 token response code: " + Integer.toString(mrvo.getStatusCode()));
 
-        if (mrvo.getStatusCode() == 200 && mrvo.getResponse() != null) {
+            if (mrvo.getStatusCode() == 200 && mrvo.getResponse() != null) {
 
-        	String access_token = (String)mrvo.getResponse().get("access_token");
-        	String token_type = (String)mrvo.getResponse().get("token_type");
-        	Long expires_in = (Long)mrvo.getResponse().get("expires_in");
-        	String scope = (String)mrvo.getResponse().get("scope");
+                String access_token = (String)mrvo.getResponse().get("access_token");
+                String token_type = (String)mrvo.getResponse().get("token_type");
+                Long expires_in = (Long)mrvo.getResponse().get("expires_in");
+                String scope = (String)mrvo.getResponse().get("scope");
 
-        	config.setAccess_token(access_token);
-        	config.getLogger().info("OAuth2 access_token received (type=" + token_type + ", expires_in=" + expires_in + ", scope=" + scope + ")");
-            rtn = 1;
+                config.setAccess_token(access_token);
+                config.getLogger().info("OAuth2 access_token received (type=" + token_type + ", expires_in=" + expires_in + ", scope=" + scope + ")");
+                rtn = 1;
 
-        } else if (mrvo.getStatusCode() == 401) {
-        	// Refresh token expired or invalid
-        	config.getLogger().warning("OAuth2 refresh_token expired or invalid (401)");
-        	rtn = -401;
+            } else if (mrvo.getStatusCode() == 401) {
+                // Refresh token expired or invalid
+                config.getLogger().warning("OAuth2 refresh_token expired or invalid (401)");
+                rtn = -401;
 
+            } else {
+                config.getLogger().warning("OAuth2 token response error: " + mrvo.getStatusCode());
+                rtn = -1;
+            }
         } else {
-        	config.getLogger().warning("OAuth2 token response error: " + mrvo.getStatusCode());
-        	rtn = -1;
-    	}
+            // Legacy endpoint (for non-mTLS)
+            String path = "/api/v1/security/refresh";
+            config.getLogger().info("Legacy token refresh: " + path);
+
+            MwResponseVO mrvo = Common.httpPOST(path, config.getRefresh_token(), "");
+
+            config.getLogger().fine("Legacy token response code: " + Integer.toString(mrvo.getStatusCode()));
+
+            if (mrvo.getStatusCode() == 200 && mrvo.getResponse() != null) {
+
+                String access_token = (String)mrvo.getResponse().get("access_token");
+                config.setAccess_token(access_token);
+                config.getLogger().info("Legacy access_token received");
+                rtn = 1;
+
+            } else if (mrvo.getStatusCode() == 401) {
+                config.getLogger().warning("Legacy token expired or invalid (401)");
+                rtn = -401;
+
+            } else {
+                config.getLogger().warning("Legacy token response error: " + mrvo.getStatusCode());
+                rtn = -1;
+            }
+        }
 
         return rtn;
     }

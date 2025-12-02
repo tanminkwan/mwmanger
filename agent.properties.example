@@ -1,5 +1,5 @@
 # MwManger Agent Configuration
-# Version: 0000.0009.0001
+# Version: 0000.0009.0003
 # Copy this file to agent.properties and configure for your environment
 
 # Server Configuration
@@ -38,3 +38,10 @@ user_name_var=USER
 # Logging Configuration
 log_dir=./logs
 log_level=INFO
+
+# Security Configuration
+# Path traversal check - validates paths to prevent directory traversal attacks (default: true)
+security.path_traversal_check=true
+# Command injection check - validates command parameters for shell metacharacters (default: false)
+# WARNING: Enabling this may break legitimate use cases with special characters in parameters
+security.command_injection_check=false

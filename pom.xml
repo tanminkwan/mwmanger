@@ -7,7 +7,7 @@
 
     <groupId>com.leebalso</groupId>
     <artifactId>mwmanger</artifactId>
-    <version>0000.0008.0005</version>
+    <version>0000.0009.0003</version>
     <packaging>jar</packaging>
 
     <name>MwManger Agent</name>

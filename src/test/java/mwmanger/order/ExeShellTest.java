@@ -14,14 +14,7 @@ import mwmanger.vo.ResultVO;
 /**
  * ExeShell 테스트
  *
- * ⚠️ 보안 경고: 이 클래스는 Command Injection 위험이 있습니다.
- * 현재 테스트는 기본 동작을 검증하며, 향후 보안 리팩토링 시
- * 보안 검증 테스트로 확장되어야 합니다.
- *
- * TODO: Phase 2에서 보안 강화 후 다음 테스트 추가:
- * - Command Injection 방어 테스트
- * - Command Whitelist 검증
- * - Malicious input 거부 테스트
+ * 기본 동작 및 보안 검증 테스트
  */
 class ExeShellTest {
 
@@ -116,49 +109,133 @@ class ExeShellTest {
         assertThat(result).isEqualTo(1);
     }
 
-    /**
-     * 보안 테스트 - 향후 Phase 2에서 활성화
-     *
-     * 현재는 주석 처리: Command Injection 방어 로직이 아직 구현되지 않음
-     *
-     * Phase 2 작업 시 다음 테스트들을 활성화하고 구현:
-     * 1. Whitelist 기반 명령어 검증
-     * 2. Shell metacharacter 차단
-     * 3. ProcessBuilder 사용으로 전환
-     */
+    // ==================== Security Tests ====================
+    // Note: Command injection check is OFF by default (configurable)
+    // These tests enable it explicitly to verify the security feature works
 
-    // @Test
-    // void execute_WithMaliciousCommand_ShouldThrowSecurityException() {
-    //     // Given
-    //     testCommand.put("additional_params", "; rm -rf /");
-    //     ExeShell maliciousShell = new ExeShell(testCommand);
-    //
-    //     // When & Then
-    //     assertThatThrownBy(() -> maliciousShell.execute())
-    //         .isInstanceOf(SecurityException.class)
-    //         .hasMessageContaining("Command injection detected");
-    // }
+    @Test
+    void execute_WithCommandInjection_Semicolon_ShouldFail() {
+        // Given: Command injection attempt with semicolon
+        getConfig().setSecurityCommandInjectionCheck(true);  // Enable command injection check
+        testCommand.put("additional_params", "; rm -rf /");
+        ExeShell maliciousShell = new ExeShell(testCommand);
 
-    // @Test
-    // void execute_WithPipeInParams_ShouldThrowSecurityException() {
-    //     // Given
-    //     testCommand.put("additional_params", "| cat /etc/passwd");
-    //     ExeShell maliciousShell = new ExeShell(testCommand);
-    //
-    //     // When & Then
-    //     assertThatThrownBy(() -> maliciousShell.execute())
-    //         .isInstanceOf(SecurityException.class);
-    // }
+        // When
+        maliciousShell.execute();
 
-    // @Test
-    // void execute_WithCommandNotInWhitelist_ShouldFail() {
-    //     // Given
-    //     testCommand.put("target_file_name", "dangerous.exe");
-    //     ExeShell nonWhitelistedShell = new ExeShell(testCommand);
-    //
-    //     // When & Then
-    //     assertThatThrownBy(() -> nonWhitelistedShell.execute())
-    //         .isInstanceOf(SecurityException.class)
-    //         .hasMessageContaining("not in whitelist");
-    // }
+        // Then: Should fail with security error
+        ResultVO resultVo = maliciousShell.getResultVo();
+        assertThat(resultVo.isOk()).isFalse();
+        assertThat(resultVo.getResult()).contains("SecurityException");
+
+        // Cleanup
+        getConfig().setSecurityCommandInjectionCheck(false);
+    }
+
+    @Test
+    void execute_WithCommandInjection_Pipe_ShouldFail() {
+        // Given: Command injection attempt with pipe
+        getConfig().setSecurityCommandInjectionCheck(true);  // Enable command injection check
+        testCommand.put("additional_params", "| cat /etc/passwd");
+        ExeShell maliciousShell = new ExeShell(testCommand);
+
+        // When
+        maliciousShell.execute();
+
+        // Then: Should fail with security error
+        ResultVO resultVo = maliciousShell.getResultVo();
+        assertThat(resultVo.isOk()).isFalse();
+        assertThat(resultVo.getResult()).contains("SecurityException");
+
+        // Cleanup
+        getConfig().setSecurityCommandInjectionCheck(false);
+    }
+
+    @Test
+    void execute_WithCommandInjection_Backtick_ShouldFail() {
+        // Given: Command injection attempt with backtick
+        getConfig().setSecurityCommandInjectionCheck(true);  // Enable command injection check
+        testCommand.put("additional_params", "`whoami`");
+        ExeShell maliciousShell = new ExeShell(testCommand);
+
+        // When
+        maliciousShell.execute();
+
+        // Then: Should fail with security error
+        ResultVO resultVo = maliciousShell.getResultVo();
+        assertThat(resultVo.isOk()).isFalse();
+        assertThat(resultVo.getResult()).contains("SecurityException");
+
+        // Cleanup
+        getConfig().setSecurityCommandInjectionCheck(false);
+    }
+
+    @Test
+    void execute_WithCommandInjection_DollarSign_ShouldFail() {
+        // Given: Command injection attempt with $()
+        getConfig().setSecurityCommandInjectionCheck(true);  // Enable command injection check
+        testCommand.put("additional_params", "$(whoami)");
+        ExeShell maliciousShell = new ExeShell(testCommand);
+
+        // When
+        maliciousShell.execute();
+
+        // Then: Should fail with security error
+        ResultVO resultVo = maliciousShell.getResultVo();
+        assertThat(resultVo.isOk()).isFalse();
+        assertThat(resultVo.getResult()).contains("SecurityException");
+
+        // Cleanup
+        getConfig().setSecurityCommandInjectionCheck(false);
+    }
+
+    @Test
+    void execute_WithCommandInjection_Disabled_ShouldNotBlock() {
+        // Given: Command injection attempt but check is disabled (default)
+        getConfig().setSecurityCommandInjectionCheck(false);  // Ensure disabled (default)
+        testCommand.put("additional_params", "; rm -rf /");
+        ExeShell maliciousShell = new ExeShell(testCommand);
+
+        // When
+        maliciousShell.execute();
+
+        // Then: Should NOT be blocked by command injection check
+        // (may still fail for other reasons like file not found, but not SecurityException for command injection)
+        ResultVO resultVo = maliciousShell.getResultVo();
+        // When disabled, the command is allowed to proceed (may fail for other reasons)
+        // The key is it should NOT contain "Invalid parameters" security error
+        if (!resultVo.isOk()) {
+            assertThat(resultVo.getResult()).doesNotContain("Invalid parameters");
+        }
+    }
+
+    @Test
+    void execute_WithPathTraversal_ShouldFail() {
+        // Given: Path traversal attempt
+        testCommand.put("target_file_path", "../../../etc/");
+        ExeShell maliciousShell = new ExeShell(testCommand);
+
+        // When
+        maliciousShell.execute();
+
+        // Then: Should fail with security error
+        ResultVO resultVo = maliciousShell.getResultVo();
+        assertThat(resultVo.isOk()).isFalse();
+        assertThat(resultVo.getResult()).contains("SecurityException");
+    }
+
+    @Test
+    void execute_WithInvalidFilename_ShouldFail() {
+        // Given: Invalid filename with path separator
+        testCommand.put("target_file_name", "../passwd");
+        ExeShell maliciousShell = new ExeShell(testCommand);
+
+        // When
+        maliciousShell.execute();
+
+        // Then: Should fail with security error
+        ResultVO resultVo = maliciousShell.getResultVo();
+        assertThat(resultVo.isOk()).isFalse();
+        assertThat(resultVo.getResult()).contains("SecurityException");
+    }
 }

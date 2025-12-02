@@ -54,6 +54,10 @@ public final class Config {
 	private String truststore_path = "";
 	private String truststore_password = "";
 
+	// Security Configuration
+	private boolean security_command_injection_check = false;
+	private boolean security_path_traversal_check = true;
+
 	private Logger logger;
 	
 	private String os = "";	
@@ -185,6 +189,20 @@ public final class Config {
 		this.truststore_password = truststore_password;
 	}
 
+	// Security Configuration getters/setters
+	public boolean isSecurityCommandInjectionCheck() {
+		return security_command_injection_check;
+	}
+	public void setSecurityCommandInjectionCheck(boolean security_command_injection_check) {
+		this.security_command_injection_check = security_command_injection_check;
+	}
+	public boolean isSecurityPathTraversalCheck() {
+		return security_path_traversal_check;
+	}
+	public void setSecurityPathTraversalCheck(boolean security_path_traversal_check) {
+		this.security_path_traversal_check = security_path_traversal_check;
+	}
+
     public long setConfig() {
 
 		Properties prop = new Properties();
@@ -222,6 +240,10 @@ public final class Config {
 			setClientKeystorePassword(prop.getProperty("client.keystore.password", ""));
 			setTruststorePath(prop.getProperty("truststore.path", ""));
 			setTruststorePassword(prop.getProperty("truststore.password", ""));
+
+			// Security Configuration (default: command injection check OFF, path traversal check ON)
+			setSecurityCommandInjectionCheck(Boolean.parseBoolean(prop.getProperty("security.command_injection_check", "false")));
+			setSecurityPathTraversalCheck(Boolean.parseBoolean(prop.getProperty("security.path_traversal_check", "true")));
 
 			//Create Logger
 			Logger logger = Logger.getLogger("Hennry");

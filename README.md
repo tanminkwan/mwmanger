@@ -22,7 +22,7 @@ MwManger는 Leebalso(리발소) 프로젝트의 에이전트 프로그램으로,
 
 MwManger는 분산 환경의 서버 관리를 자동화하기 위한 에이전트 프로그램입니다. 중앙 Leebalso 서버의 지시에 따라 다양한 작업을 수행하며, 실시간 명령 수신 및 결과 전송을 지원합니다.
 
-**버전**: 0000.0009.0001
+**버전**: 0000.0009.0003
 **타입**: JAVAAGENT
 
 ## 주요 특징
@@ -38,6 +38,9 @@ MwManger는 분산 환경의 서버 관리를 자동화하기 위한 에이전�
 - **보안 통신**: TLS 1.2 지원, JWT 기반 인증(Access Token, Refresh Token)
 - **mTLS 인증**: 클라이언트 인증서 기반 상호 인증 (RFC 8705)
 - **계단식 토큰 갱신**: refresh_token → mTLS 자동 fallback
+- **Command Injection 방어**: SecurityValidator를 통한 입력 검증
+- **Path Traversal 방어**: 경로 탐색 공격 차단
+- **토큰 로깅 마스킹**: 민감 정보 보호 (끝 10자리만 표시)
 - **상태 관리**: Type-safe state transitions (CREATED → STARTING → RUNNING → STOPPING → STOPPED)
 - **에러 처리**: 포괄적인 예외 처리 및 복구 메커니즘
 
@@ -289,7 +292,8 @@ mwmanger/
 │   │           │
 │   │           ├── common/
 │   │           │   ├── Config.java              # 설정 관리 (Singleton)
-│   │           │   └── Common.java              # HTTP 통신 유틸리티
+│   │           │   ├── Common.java              # HTTP 통신 유틸리티
+│   │           │   └── SecurityValidator.java   # ★ 보안 검증 유틸리티
 │   │           │
 │   │           ├── order/                       # 명령 실행 모듈
 │   │           │   ├── Order.java               # 추상 Order 클래스
@@ -311,8 +315,7 @@ mwmanger/
 │   │           │   ├── JmxStatFunc.java         # JMX 통계 수집
 │   │           │   ├── SSLCertiFunc.java        # SSL 인증서 정보
 │   │           │   ├── SSLCertiFileFunc.java    # SSL 인증서 파일
-│   │           │   ├── DownloadNUnzipFunc.java  # 파일 다운로드 및 압축해제
-│   │           │   └── SuckSyperFunc.java       # Syper 데이터 수집
+│   │           │   └── DownloadNUnzipFunc.java  # 파일 다운로드 및 압축해제
 │   │           │
 │   │           ├── kafka/
 │   │           │   ├── MwConsumerThread.java    # Kafka Consumer
@@ -342,7 +345,8 @@ mwmanger/
 │       │       ├── agentfunction/
 │       │       │   └── AgentFuncFactoryTest.java
 │       │       ├── common/
-│       │       │   └── CommonTest.java
+│       │       │   ├── CommonTest.java
+│       │       │   └── SecurityValidatorTest.java  # ★ 보안 검증 테스트
 │       │       ├── order/
 │       │       │   ├── OrderTest.java
 │       │       │   └── ExeShellTest.java
@@ -407,6 +411,10 @@ user_name_var=USER
 # 로그 설정
 log_dir=/var/log/mwagent
 log_level=INFO
+
+# 보안 설정 (선택 사항)
+security.path_traversal_check=true
+security.command_injection_check=false
 ```
 
 ### 설정 항목 설명
@@ -428,6 +436,11 @@ log_level=INFO
 - **client.keystore.password**: keystore 비밀번호
 - **truststore.path**: 서버 CA 인증서 truststore 경로 (JKS)
 - **truststore.password**: truststore 비밀번호
+
+#### 보안 설정 (선택 사항)
+- **security.path_traversal_check**: 경로 탐색 공격 방어 (`true`/`false`, 기본값: `true`)
+- **security.command_injection_check**: 명령 주입 공격 방어 (`true`/`false`, 기본값: `false`)
+  - 주의: 활성화 시 특수 문자(`;`, `|`, `` ` ``, `$()` 등)를 포함한 파라미터가 차단됩니다
 
 ## 실행 방법
 
@@ -805,10 +818,19 @@ Test Breakdown:
 5. **Kafka 보안**: 필요 시 SASL/SSL 설정 추가
 6. **TLS 버전**: TLS 1.2 이상 사용
 
+### 입력 검증 (Phase 2 구현)
+
+7. **Command Injection 방어**: SecurityValidator로 위험 문자 차단 (`;`, `|`, `` ` ``, `$()`, `&`, `<`, `>`, `\n`)
+   - 설정: `security.command_injection_check=true` (기본값: false)
+8. **Path Traversal 방어**: `../` 패턴 및 허용되지 않은 경로 차단
+   - 설정: `security.path_traversal_check=true` (기본값: true)
+9. **Filename 검증**: 경로 구분자 포함 파일명 거부
+10. **토큰 마스킹**: 로그에 토큰 출력 시 끝 10자리만 표시
+
 ### 운영 보안
 
-7. **명령 검증**: 악의적인 명령 실행 방지를 위한 화이트리스트 관리 권장
-8. **인증서 갱신**: mTLS 인증서 만료 전 갱신 계획 수립
+11. **명령 검증**: 악의적인 명령 실행 방지를 위한 화이트리스트 관리 권장
+12. **인증서 갱신**: mTLS 인증서 만료 전 갱신 계획 수립
 
 ## 확장 방법
 
@@ -880,7 +902,29 @@ public class CustomOrder extends Order {
 - refresh_token 만료 시 mTLS로 자동 fallback
 - 테스트 서버에 토큰 만료 시뮬레이션 API 추가
 
-**다음 단계 (Phase 2-3):**
+### Phase 2: Security Hardening (2025-12-02)
+
+**완료 항목:**
+- ✅ SecurityValidator 클래스 추가 (보안 검증 유틸리티)
+- ✅ Command Injection 방어 (ExeShell, ExeScript)
+- ✅ Path Traversal 방어 (ReadFullPathFile, DownloadFile)
+- ✅ 토큰 로깅 마스킹 (끝 10자리만 표시)
+- ✅ 155개 테스트 통과 (33개 보안 테스트 추가)
+- ✅ 보안 검증 설정 옵션화 (agent.properties에서 on/off 가능)
+
+**보안 검증 항목:**
+- 위험 문자 차단: `;`, `|`, `` ` ``, `$()`, `&`, `<`, `>`, `\n`, `\r`
+- 경로 탐색 패턴 차단: `../`, `..\\`
+- 파일명 검증: 경로 구분자 포함 거부
+- 허용된 디렉토리만 접근 가능 (ReadFullPathFile)
+
+**보안 설정 옵션:**
+| 설정 | 기본값 | 설명 |
+|------|--------|------|
+| `security.path_traversal_check` | `true` | 경로 탐색 공격 방어 |
+| `security.command_injection_check` | `false` | 명령 주입 공격 방어 (특수 문자 차단) |
+
+**다음 단계 (Phase 3):**
 - TokenRefreshService 분리
 - CommandPollingService 분리
 - HealthCheckService 분리
@@ -894,7 +938,7 @@ public class CustomOrder extends Order {
 
 ---
 
-**Last Updated**: 2025-11-28
-**Version**: 0000.0009.0001
-**Architecture**: Phase 1.5 - mTLS & Cascading Token Renewal
-**Test Coverage**: 127 tests (100% passing)
+**Last Updated**: 2025-12-02
+**Version**: 0000.0009.0003
+**Architecture**: Phase 2 - Security Hardening
+**Test Coverage**: 155 tests (100% passing)
