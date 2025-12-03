@@ -926,7 +926,63 @@ public class CustomOrder extends Order {
 | `security.path_traversal_check` | `true` | 경로 탐색 공격 방어 |
 | `security.command_injection_check` | `false` | 명령 주입 공격 방어 (특수 문자 차단) |
 
-**다음 단계 (Phase 3):**
+### Phase 3: Dependency Injection Architecture (2025-12-03)
+
+**완료 항목:**
+- ✅ ConfigurationProvider 인터페이스 추가 (설정 추상화)
+- ✅ HttpClient 인터페이스 추가 (HTTP 통신 추상화)
+- ✅ ApacheHttpClientAdapter 구현 (HTTP/HTTPS/mTLS 지원)
+- ✅ ApplicationContext DI 컨테이너 구현
+- ✅ Config.java가 ConfigurationProvider 인터페이스 구현
+- ✅ MockConfigurationProvider 테스트용 구현
+- ✅ 187개 테스트 통과
+
+**개선 사항:**
+- 의존성 주입을 통한 모듈 분리
+- 인터페이스 추상화로 테스트 용이성 향상
+- ApplicationContext 싱글톤 패턴으로 서비스 관리
+
+### Phase 4: mTLS Test Environment (2025-12-03)
+
+**완료 항목:**
+- ✅ 테스트 인증서 생성 스크립트 (CA, Server, Agent)
+- ✅ Python OAuth2 인증 서버 (mock_server.py)
+- ✅ mTLS + IP + Username 검증 로직 구현
+- ✅ Certificate Subject에 usertype 추가 (OU=agent)
+- ✅ Java/Python mTLS 테스트 클라이언트
+
+**인증서 Subject 형식:**
+```
+CN={hostname}_{username}_J, OU=agent, O=Leebalso, C=KR
+```
+
+**JWT 토큰 클레임:**
+```json
+{
+  "sub": "testserver01_appuser_J",
+  "iss": "leebalso-auth-server",
+  "usertype": "agent",
+  "hostname": "testserver01",
+  "username": "appuser",
+  "client_ip": "127.0.0.1"
+}
+```
+
+**검증 흐름:**
+1. Certificate OU = agent (usertype 확인)
+2. Agent 등록 및 활성 상태 확인
+3. Client IP in allowed list (인증서 복사 공격 방어)
+
+**테스트 서버 실행:**
+```bash
+# 인증서 생성
+cd test-server && generate-certs.bat
+
+# mTLS 서버 실행
+python mock_server.py --ssl
+```
+
+**다음 단계 (Phase 5):**
 - TokenRefreshService 분리
 - CommandPollingService 분리
 - HealthCheckService 분리
@@ -940,7 +996,7 @@ public class CustomOrder extends Order {
 
 ---
 
-**Last Updated**: 2025-12-02
-**Version**: 0000.0009.0003
-**Architecture**: Phase 2 - Security Hardening
-**Test Coverage**: 155 tests (100% passing)
+**Last Updated**: 2025-12-03
+**Version**: 0000.0009.0005
+**Architecture**: Phase 4 - mTLS Test Environment
+**Test Coverage**: 187 tests (100% passing)

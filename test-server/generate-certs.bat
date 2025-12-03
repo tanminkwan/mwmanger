@@ -1,6 +1,11 @@
 @echo off
 REM Certificate generation script for mTLS testing (Windows)
 REM Requires OpenSSL and Java keytool in PATH
+REM
+REM Certificate Subject Format:
+REM   CN={hostname}_{username}_J, OU=agent, O=Leebalso, C=KR
+REM   - CN: Agent ID (hostname_username_J)
+REM   - OU: usertype (agent) - identifies this as an agent certificate
 
 setlocal enabledelayedexpansion
 
@@ -12,7 +17,8 @@ echo Generating certificates for mTLS testing
 echo ==========================================
 
 REM Create certs directory
-if not exist "%CERTS_DIR%" mkdir "%CERTS_DIR%"
+if exist "%CERTS_DIR%" rmdir /s /q "%CERTS_DIR%"
+mkdir "%CERTS_DIR%"
 cd "%CERTS_DIR%"
 
 REM ==================== 1. Create CA (Certificate Authority) ====================
@@ -22,7 +28,7 @@ echo [1/4] Creating CA (Certificate Authority)...
 openssl genrsa -out ca.key 4096
 if errorlevel 1 goto :error
 
-openssl req -x509 -new -nodes -key ca.key -sha256 -days %DAYS_VALID% -out ca.crt -subj "/CN=Test CA/OU=Testing/O=MwAgent/C=KR"
+openssl req -x509 -new -nodes -key ca.key -sha256 -days %DAYS_VALID% -out ca.crt -subj "//CN=Leebalso Test CA\OU=CA\O=Leebalso\C=KR"
 if errorlevel 1 goto :error
 
 echo    * CA certificate created: ca.crt
@@ -34,7 +40,7 @@ echo [2/4] Creating server certificate...
 openssl genrsa -out server.key 2048
 if errorlevel 1 goto :error
 
-openssl req -new -key server.key -out server.csr -subj "/CN=localhost/OU=Server/O=MwAgent/C=KR"
+openssl req -new -key server.key -out server.csr -subj "//CN=localhost\OU=server\O=Leebalso\C=KR"
 if errorlevel 1 goto :error
 
 REM Create server extensions file
@@ -59,47 +65,72 @@ REM ==================== 3. Create Agent Client Certificates ===================
 echo.
 echo [3/4] Creating agent client certificates...
 
-REM Agent test001
+REM Agent test001: hostname=testserver01, username=appuser
+REM Subject: CN=testserver01_appuser_J, OU=agent, O=Leebalso, C=KR
 set AGENT_ID=agent-test001
-echo    Creating certificate for %AGENT_ID%...
+set AGENT_CN=testserver01_appuser_J
+echo    Creating certificate for %AGENT_ID% (CN=%AGENT_CN%)...
 
 openssl genrsa -out %AGENT_ID%.key 2048
 if errorlevel 1 goto :error
 
-openssl req -new -key %AGENT_ID%.key -out %AGENT_ID%.csr -subj "/CN=%AGENT_ID%/OU=Agents/O=MwAgent/C=KR"
+openssl req -new -key %AGENT_ID%.key -out %AGENT_ID%.csr -subj "//CN=%AGENT_CN%\OU=agent\O=Leebalso\C=KR"
 if errorlevel 1 goto :error
 
 openssl x509 -req -in %AGENT_ID%.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out %AGENT_ID%.crt -days %DAYS_VALID% -sha256
 if errorlevel 1 goto :error
 
-openssl pkcs12 -export -in %AGENT_ID%.crt -inkey %AGENT_ID%.key -out %AGENT_ID%.p12 -name %AGENT_ID% -password pass:agent-password
+openssl pkcs12 -export -in %AGENT_ID%.crt -inkey %AGENT_ID%.key -out %AGENT_ID%.p12 -name %AGENT_ID% -password pass:agent-password -legacy
 if errorlevel 1 goto :error
 
-echo    * %AGENT_ID% certificate created: %AGENT_ID%.p12
+echo    * %AGENT_ID% certificate created
+echo      Subject: CN=%AGENT_CN%, OU=agent, O=Leebalso, C=KR
 
-REM Agent test002
+REM Agent test002: hostname=testserver02, username=svcuser
 set AGENT_ID=agent-test002
-echo    Creating certificate for %AGENT_ID%...
+set AGENT_CN=testserver02_svcuser_J
+echo    Creating certificate for %AGENT_ID% (CN=%AGENT_CN%)...
 
 openssl genrsa -out %AGENT_ID%.key 2048
 if errorlevel 1 goto :error
 
-openssl req -new -key %AGENT_ID%.key -out %AGENT_ID%.csr -subj "/CN=%AGENT_ID%/OU=Agents/O=MwAgent/C=KR"
+openssl req -new -key %AGENT_ID%.key -out %AGENT_ID%.csr -subj "//CN=%AGENT_CN%\OU=agent\O=Leebalso\C=KR"
 if errorlevel 1 goto :error
 
 openssl x509 -req -in %AGENT_ID%.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out %AGENT_ID%.crt -days %DAYS_VALID% -sha256
 if errorlevel 1 goto :error
 
-openssl pkcs12 -export -in %AGENT_ID%.crt -inkey %AGENT_ID%.key -out %AGENT_ID%.p12 -name %AGENT_ID% -password pass:agent-password
+openssl pkcs12 -export -in %AGENT_ID%.crt -inkey %AGENT_ID%.key -out %AGENT_ID%.p12 -name %AGENT_ID% -password pass:agent-password -legacy
 if errorlevel 1 goto :error
 
-echo    * %AGENT_ID% certificate created: %AGENT_ID%.p12
+echo    * %AGENT_ID% certificate created
+echo      Subject: CN=%AGENT_CN%, OU=agent, O=Leebalso, C=KR
+
+REM Agent test003: hostname=testserver03, username=testuser (for expired refresh token testing)
+set AGENT_ID=agent-test003
+set AGENT_CN=testserver03_testuser_J
+echo    Creating certificate for %AGENT_ID% (CN=%AGENT_CN%)...
+
+openssl genrsa -out %AGENT_ID%.key 2048
+if errorlevel 1 goto :error
+
+openssl req -new -key %AGENT_ID%.key -out %AGENT_ID%.csr -subj "//CN=%AGENT_CN%\OU=agent\O=Leebalso\C=KR"
+if errorlevel 1 goto :error
+
+openssl x509 -req -in %AGENT_ID%.csr -CA ca.crt -CAkey ca.key -CAcreateserial -out %AGENT_ID%.crt -days %DAYS_VALID% -sha256
+if errorlevel 1 goto :error
+
+openssl pkcs12 -export -in %AGENT_ID%.crt -inkey %AGENT_ID%.key -out %AGENT_ID%.p12 -name %AGENT_ID% -password pass:agent-password -legacy
+if errorlevel 1 goto :error
+
+echo    * %AGENT_ID% certificate created
+echo      Subject: CN=%AGENT_CN%, OU=agent, O=Leebalso, C=KR
 
 REM ==================== 4. Create Java Truststore ====================
 echo.
 echo [4/4] Creating Java truststore...
 
-keytool -import -trustcacerts -alias testca -file ca.crt -keystore truststore.jks -storepass truststore-password -noprompt
+keytool -import -trustcacerts -alias leebalso-ca -file ca.crt -keystore truststore.jks -storepass truststore-password -noprompt
 if errorlevel 1 goto :error
 
 echo    * Truststore created: truststore.jks
@@ -121,24 +152,29 @@ echo     - ca.crt (CA certificate)
 echo     - ca.key (CA private key)
 echo.
 echo   Server:
-echo     - server.crt (Server certificate)
+echo     - server.crt (Server certificate, OU=server)
 echo     - server.key (Server private key)
 echo.
-echo   Agent Clients:
-echo     - agent-test001.p12 (password: agent-password)
-echo     - agent-test002.p12 (password: agent-password)
+echo   Agent Clients (OU=agent):
+echo     - agent-test001.p12 (CN=testserver01_appuser_J, password: agent-password)
+echo     - agent-test002.p12 (CN=testserver02_svcuser_J, password: agent-password)
+echo     - agent-test003.p12 (CN=testserver03_testuser_J, password: agent-password)
 echo.
 echo   Java Truststore:
 echo     - truststore.jks (password: truststore-password)
 echo.
-echo To start the mock server with mTLS:
-echo   python mock_server.py --ssl
+echo Certificate Subject Format:
+echo   CN={hostname}_{username}_J, OU=agent, O=Leebalso, C=KR
 echo.
 echo ==========================================
 
 REM Verify certificates
 echo.
 echo Verifying certificates...
+echo.
+echo CA certificate:
+openssl x509 -in ca.crt -noout -subject -issuer
+
 echo.
 echo Server certificate:
 openssl x509 -in server.crt -noout -subject -issuer
@@ -150,6 +186,10 @@ openssl x509 -in agent-test001.crt -noout -subject -issuer
 echo.
 echo Agent test002 certificate:
 openssl x509 -in agent-test002.crt -noout -subject -issuer
+
+echo.
+echo Agent test003 certificate:
+openssl x509 -in agent-test003.crt -noout -subject -issuer
 
 cd ..
 goto :end

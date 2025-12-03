@@ -57,40 +57,46 @@ echo "   ✓ Server certificate created: server.crt"
 echo ""
 echo "[3/4] Creating agent client certificates..."
 
-# Agent test001
-AGENT_ID="agent-test001"
-echo "   Creating certificate for $AGENT_ID..."
+# Function to create agent certificate
+# Subject format: CN={agent_id}, OU=agent, O=Leebalso, C=KR
+#   - CN: Agent ID (hostname_username_J)
+#   - OU: usertype (agent) - identifies this as an agent certificate
+create_agent_cert() {
+    local AGENT_ID=$1
+    local HOSTNAME=$2
+    local USERNAME=$3
+    local PASSWORD=${4:-agent-password}
 
-openssl genrsa -out ${AGENT_ID}.key 2048
+    # CN format: hostname_username_J (matches agent_id format)
+    local CN="${HOSTNAME}_${USERNAME}_J"
 
-openssl req -new -key ${AGENT_ID}.key -out ${AGENT_ID}.csr \
-    -subj "/CN=${AGENT_ID}/OU=Agents/O=MwAgent/C=KR"
+    echo "   Creating certificate for ${AGENT_ID} (CN=${CN})..."
 
-openssl x509 -req -in ${AGENT_ID}.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
-    -out ${AGENT_ID}.crt -days $DAYS_VALID -sha256
+    openssl genrsa -out ${AGENT_ID}.key 2048
 
-# Convert to PKCS12 format for Java
-openssl pkcs12 -export -in ${AGENT_ID}.crt -inkey ${AGENT_ID}.key \
-    -out ${AGENT_ID}.p12 -name ${AGENT_ID} -password pass:agent-password
+    # Subject: CN=hostname_username_J, OU=agent, O=Leebalso, C=KR
+    openssl req -new -key ${AGENT_ID}.key -out ${AGENT_ID}.csr \
+        -subj "/CN=${CN}/OU=agent/O=Leebalso/C=KR"
 
-echo "   ✓ ${AGENT_ID} certificate created: ${AGENT_ID}.p12"
+    openssl x509 -req -in ${AGENT_ID}.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
+        -out ${AGENT_ID}.crt -days $DAYS_VALID -sha256
 
-# Agent test002
-AGENT_ID="agent-test002"
-echo "   Creating certificate for $AGENT_ID..."
+    # Convert to PKCS12 format for Java (use -legacy for Java 1.8 compatibility)
+    openssl pkcs12 -export -in ${AGENT_ID}.crt -inkey ${AGENT_ID}.key \
+        -out ${AGENT_ID}.p12 -name ${AGENT_ID} -password pass:${PASSWORD} -legacy
 
-openssl genrsa -out ${AGENT_ID}.key 2048
+    echo "   ✓ ${AGENT_ID} certificate created: ${AGENT_ID}.p12"
+    echo "     Subject: CN=${CN}, OU=agent, O=Leebalso, C=KR"
+}
 
-openssl req -new -key ${AGENT_ID}.key -out ${AGENT_ID}.csr \
-    -subj "/CN=${AGENT_ID}/OU=Agents/O=MwAgent/C=KR"
+# Agent test001: hostname=testserver01, username=appuser
+create_agent_cert "agent-test001" "testserver01" "appuser"
 
-openssl x509 -req -in ${AGENT_ID}.csr -CA ca.crt -CAkey ca.key -CAcreateserial \
-    -out ${AGENT_ID}.crt -days $DAYS_VALID -sha256
+# Agent test002: hostname=testserver02, username=svcuser
+create_agent_cert "agent-test002" "testserver02" "svcuser"
 
-openssl pkcs12 -export -in ${AGENT_ID}.crt -inkey ${AGENT_ID}.key \
-    -out ${AGENT_ID}.p12 -name ${AGENT_ID} -password pass:agent-password
-
-echo "   ✓ ${AGENT_ID} certificate created: ${AGENT_ID}.p12"
+# Agent test003: for testing expired refresh token scenario
+create_agent_cert "agent-test003" "testserver03" "testuser"
 
 # ==================== 4. Create Java Truststore ====================
 echo ""
