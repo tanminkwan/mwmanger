@@ -348,7 +348,7 @@ public class Common {
 			return -1;
 		}
 
-		rtn = config.updateProperty("token", config.getRefresh_token());
+		rtn = config.updatePropertyLegacy("token", config.getRefresh_token());
 
 		if(rtn<0){
 			config.getLogger().severe("Failed when updating Refresh Token propery.");

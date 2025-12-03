@@ -5,6 +5,7 @@ import static mwmanger.common.Config.getConfig;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import mwmanger.application.ApplicationContext;
 import mwmanger.lifecycle.AgentLifecycleManager;
 
 /**
@@ -13,6 +14,11 @@ import mwmanger.lifecycle.AgentLifecycleManager;
  * Phase 1 Refactoring: Lifecycle Management
  * - 기존: PreWork → FirstWork → MainWork (절차적)
  * - 개선: AgentLifecycleManager (생명주기 기반)
+ *
+ * Phase 3 Refactoring: Dependency Injection
+ * - ApplicationContext: DI 컨테이너
+ * - ConfigurationProvider: 설정 추상화
+ * - HttpClient: HTTP 통신 추상화
  *
  * 아키텍처:
  * - AgentLifecycleManager: 전체 생명주기 관리
@@ -31,6 +37,9 @@ public class MwAgent {
             // Initialize configuration
             getConfig().setConfig();
 
+            // Initialize ApplicationContext (DI Container)
+            ApplicationContext.getInstance().initialize();
+
             // Create lifecycle manager
             AgentLifecycleManager lifecycleManager = new AgentLifecycleManager();
 
@@ -39,6 +48,7 @@ public class MwAgent {
                 logger.info("Shutdown signal received");
                 try {
                     lifecycleManager.stop();
+                    ApplicationContext.getInstance().shutdown();
                 } catch (Exception e) {
                     logger.log(Level.SEVERE, "Error during shutdown", e);
                 }

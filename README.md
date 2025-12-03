@@ -22,7 +22,7 @@ MwManger는 Leebalso(리발소) 프로젝트의 에이전트 프로그램으로,
 
 MwManger는 분산 환경의 서버 관리를 자동화하기 위한 에이전트 프로그램입니다. 중앙 Leebalso 서버의 지시에 따라 다양한 작업을 수행하며, 실시간 명령 수신 및 결과 전송을 지원합니다.
 
-**버전**: 0000.0009.0004
+**버전**: 0000.0009.0005
 **타입**: JAVAAGENT
 
 ## 주요 특징
@@ -46,8 +46,10 @@ MwManger는 분산 환경의 서버 관리를 자동화하기 위한 에이전�
 
 ### Extensibility
 - **확장 가능한 구조**: 플러그인 방식의 Order 및 AgentFunction 추가 가능
-- **의존성 주입**: 모든 서비스 컴포넌트에 DI 지원으로 테스트 가능
+- **의존성 주입 (DI)**: ApplicationContext 기반 DI 컨테이너 (Phase 3)
+- **인터페이스 추상화**: ConfigurationProvider, HttpClient 인터페이스
 - **서비스 분리**: 각 기능이 독립적인 서비스로 분리 (KafkaService, CommandExecutorService)
+- **테스트 용이성**: Mock 객체 주입으로 단위 테스트 지원
 - **크로스 플랫폼**: Windows, Linux, AIX, HP-UX 지원
 
 ## 시스템 요구사항
@@ -103,7 +105,7 @@ download-dependencies.bat
 build-offline.bat
 
 # 생성된 파일
-build/jar/mwmanger-0000.0009.0004.jar
+build/jar/mwmanger-0000.0009.0005.jar
 ```
 
 자세한 내용은 [lib/README.md](lib/README.md) 참조
@@ -118,7 +120,7 @@ mvn clean package
 mvn test
 
 # 생성된 파일
-target/mwmanger-0000.0009.0004-jar-with-dependencies.jar
+target/mwmanger-0000.0009.0005-jar-with-dependencies.jar
 ```
 
 ### Gradle 사용 (온라인 환경)
@@ -131,7 +133,7 @@ gradle fatJar
 gradle test
 
 # 생성된 파일
-build/libs/mwmanger-all-0000.0009.0004.jar
+build/libs/mwmanger-all-0000.0009.0005.jar
 ```
 
 ## 버전 관리

@@ -12,7 +12,13 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
 
-public final class Config {
+import mwmanger.infrastructure.config.ConfigurationProvider;
+
+/**
+ * Configuration singleton implementing ConfigurationProvider interface.
+ * Provides backward compatibility while supporting dependency injection.
+ */
+public final class Config implements ConfigurationProvider {
 
 	private static final Config INSTANCE = new Config();
 
@@ -176,12 +182,14 @@ public final class Config {
 	public void setClientKeystorePassword(String client_keystore_password) {
 		this.client_keystore_password = client_keystore_password;
 	}
+	@Override
 	public String getTruststorePath() {
 		return truststore_path;
 	}
 	public void setTruststorePath(String truststore_path) {
 		this.truststore_path = truststore_path;
 	}
+	@Override
 	public String getTruststorePassword() {
 		return truststore_password;
 	}
@@ -311,33 +319,196 @@ public final class Config {
 		
     }
     
-    public long updateProperty(String item, String value){
-    	
+    public long updatePropertyLegacy(String item, String value){
+
     	try{
-    		
+
     		Properties prop = new Properties();
 			FileReader in = new FileReader("agent.properties");
 			prop.load(in);
 			in.close();
-			
+
 			prop.setProperty(item, value);
-			
+
 			FileOutputStream out = new FileOutputStream("agent.properties");
 			prop.store(out, null);
 			out.close();
-			
-    		//String content = FileUtils.readFileToString(new File("agent.properties"),"UTF-8");
-			//String newContent = content.replaceAll(item+"=[A-Za-z0-9-_=.]*",item+"="+value);
-			//File path = new File("agent.properties");
-			//FileUtils.writeStringToFile(path, newContent, "UTF-8");
-    	
+
     	}catch(IOException e){
 			getLogger().log(Level.SEVERE, e.getMessage(), e);
 			return -1;
 		}
-    	
+
 		return 1;
 
     }
-    
+
+    // ========== ConfigurationProvider Interface Implementation ==========
+
+    private Properties properties = new Properties();
+
+    @Override
+    public String getString(String key) {
+        return properties.getProperty(key);
+    }
+
+    @Override
+    public String getString(String key, String defaultValue) {
+        return properties.getProperty(key, defaultValue);
+    }
+
+    @Override
+    public int getInt(String key) {
+        return getInt(key, 0);
+    }
+
+    @Override
+    public int getInt(String key, int defaultValue) {
+        String value = properties.getProperty(key);
+        if (value == null || value.isEmpty()) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(value);
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    @Override
+    public boolean getBoolean(String key) {
+        return getBoolean(key, false);
+    }
+
+    @Override
+    public boolean getBoolean(String key, boolean defaultValue) {
+        String value = properties.getProperty(key);
+        if (value == null || value.isEmpty()) {
+            return defaultValue;
+        }
+        return Boolean.parseBoolean(value);
+    }
+
+    @Override
+    public String getAgentId() {
+        return agent_id;
+    }
+
+    @Override
+    public String getAgentVersion() {
+        return agent_version;
+    }
+
+    @Override
+    public String getHostname() {
+        return hostName;
+    }
+
+    @Override
+    public String getUsername() {
+        return userName;
+    }
+
+    @Override
+    public String getAgentType() {
+        return agent_type;
+    }
+
+    @Override
+    public String getServerUrl() {
+        return server_url;
+    }
+
+    @Override
+    public String getCommandUri() {
+        return get_command_uri;
+    }
+
+    @Override
+    public String getResultUri() {
+        return post_agent_uri;
+    }
+
+    @Override
+    public String getAgentUri() {
+        return post_agent_uri;
+    }
+
+    @Override
+    public int getCommandCheckCycle() {
+        return (int) command_check_cycle;
+    }
+
+    @Override
+    public String getAccessToken() {
+        return access_token;
+    }
+
+    @Override
+    public void setAccessToken(String token) {
+        this.access_token = token;
+    }
+
+    @Override
+    public String getRefreshToken() {
+        return refresh_token;
+    }
+
+    @Override
+    public void setRefreshToken(String token) {
+        this.refresh_token = token;
+    }
+
+    @Override
+    public boolean isKafkaEnabled() {
+        return kafka_broker_address != null && !kafka_broker_address.isEmpty();
+    }
+
+    @Override
+    public String getKafkaBrokerAddress() {
+        return kafka_broker_address;
+    }
+
+    @Override
+    public void setKafkaBrokerAddress(String address) {
+        this.kafka_broker_address = address;
+    }
+
+    @Override
+    public boolean isMtlsEnabled() {
+        return use_mtls;
+    }
+
+    @Override
+    public String getKeystorePath() {
+        return client_keystore_path;
+    }
+
+    @Override
+    public String getKeystorePassword() {
+        return client_keystore_password;
+    }
+
+    // getTruststorePath() and getTruststorePassword() are defined above with @Override
+
+    @Override
+    public boolean isCommandInjectionCheckEnabled() {
+        return security_command_injection_check;
+    }
+
+    @Override
+    public boolean isPathTraversalCheckEnabled() {
+        return security_path_traversal_check;
+    }
+
+    @Override
+    public Map<String, String> getEnvironment() {
+        return env;
+    }
+
+    @Override
+    public void updateProperty(String key, String value) {
+        updatePropertyLegacy(key, value);
+    }
+
 }
