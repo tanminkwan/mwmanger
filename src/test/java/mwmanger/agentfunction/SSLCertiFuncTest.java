@@ -7,6 +7,7 @@ import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.junit.jupiter.api.*;
+import org.junit.jupiter.api.condition.EnabledIfEnvironmentVariable;
 
 import java.security.cert.X509Certificate;
 import java.util.ArrayList;
@@ -15,13 +16,23 @@ import java.util.logging.Logger;
 import static org.assertj.core.api.Assertions.*;
 
 /**
- * Tests for SSLCertiFunc - Remote server SSL certificate inspection
+ * Tests for SSLCertiFunc - SSL certificate inspection via local proxy
  *
- * This test validates connecting to SSL servers and retrieving certificate info.
+ * SSLCertiFunc connects to 127.0.0.1 with SNI (Server Name Indication) to
+ * inspect SSL certificates. This design allows certificate checking through
+ * a local proxy server.
  *
- * Test modes:
- * 1. Unit tests for helper methods (always run)
- * 2. Integration tests with real servers (require network)
+ * Prerequisites for integration tests:
+ * 1. Mock server running with SSL: python test-server/mock_server.py --ssl
+ * 2. Set environment variable: SSL_CERT_INTEGRATION_TEST=true
+ *
+ * To run:
+ *   # Terminal 1: Start SSL server
+ *   cd test-server && python mock_server.py --ssl
+ *
+ *   # Terminal 2: Run tests
+ *   set SSL_CERT_INTEGRATION_TEST=true
+ *   mvn test -Dtest=SSLCertiFuncTest
  */
 @DisplayName("SSLCertiFunc Tests")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -40,7 +51,7 @@ class SSLCertiFuncTest {
     }
 
     // ==========================================================================
-    // Unit Tests - Helper Methods
+    // Unit Tests - Helper Methods (Always Run)
     // ==========================================================================
 
     @Test
@@ -81,11 +92,8 @@ class SSLCertiFuncTest {
 
     @Test
     @Order(4)
-    @DisplayName("printValidCerts: Format certificate info as JSON")
-    void testPrintValidCerts_FormatOutput() throws Exception {
-        // Given: Mock certificate data (we'll test with null/empty for now)
-        // Note: In real test, we'd need actual X509Certificate objects
-
+    @DisplayName("printValidCerts: Format empty certificate array as JSON")
+    void testPrintValidCerts_EmptyArray() throws Exception {
         // When: Call with empty array
         ResultVO result = func.printValidCerts("test.example.com", new X509Certificate[0]);
 
@@ -98,168 +106,21 @@ class SSLCertiFuncTest {
 
         JSONArray certs = (JSONArray) json.get("certs");
         assertThat(certs).isEmpty();
+
+        System.out.println("[Unit] printValidCerts with empty array: OK");
     }
 
     // ==========================================================================
-    // Integration Tests - Local SSL Server (requires mock_server --ssl)
+    // Integration Tests - via exeCommand (requires mock_server --ssl on 8443)
     // ==========================================================================
 
     @Test
     @Order(10)
-    @DisplayName("Check localhost SSL certificate (if mock server running with SSL)")
-    void testCheckLocalSSLCertificate() {
+    @EnabledIfEnvironmentVariable(named = "SSL_CERT_INTEGRATION_TEST", matches = "true")
+    @DisplayName("exeCommand: Check localhost:8443 SSL certificate")
+    void testExeCommand_Localhost8443() throws Exception {
         // Given: localhost:8443 (mock_server with --ssl)
-        String domain = "localhost";
-        String ip = "127.0.0.1";
-        int port = 8443;
-
-        // When: Try to get certificate
-        X509Certificate[] certs = func.checkSSLCertificate(domain, ip, port);
-
-        // Then: Either succeeds or fails gracefully (server may not be running)
-        if (certs.length > 0) {
-            System.out.println("\n=== Local SSL Server Certificate ===");
-            for (int i = 0; i < certs.length; i++) {
-                X509Certificate cert = certs[i];
-                System.out.println("Certificate " + (i + 1) + ":");
-                System.out.println("  Subject: " + cert.getSubjectDN().getName());
-                System.out.println("  Issuer: " + cert.getIssuerDN().getName());
-                System.out.println("  Valid: " + cert.getNotBefore() + " to " + cert.getNotAfter());
-                System.out.println();
-            }
-        } else {
-            System.out.println("[INFO] No local SSL server running on " + domain + ":" + port);
-            System.out.println("[INFO] To test, run: python test-server/mock_server.py --ssl");
-        }
-    }
-
-    // ==========================================================================
-    // Integration Tests - External SSL Servers (require network)
-    // ==========================================================================
-
-    @Test
-    @Order(20)
-    @DisplayName("Check google.com SSL certificate")
-    void testCheckGoogleSSLCertificate() {
-        // Given
-        String domain = "www.google.com";
-
-        // When
-        X509Certificate[] certs = func.checkSSLCertificate(domain, domain, 443);
-
-        // Then
-        if (certs.length > 0) {
-            assertThat(certs).isNotEmpty();
-
-            System.out.println("\n=== Google SSL Certificate ===");
-            X509Certificate cert = certs[0];
-            System.out.println("Subject: " + cert.getSubjectDN().getName());
-            System.out.println("Issuer: " + cert.getIssuerDN().getName());
-            System.out.println("Valid until: " + cert.getNotAfter());
-
-            // Verify it's a valid Google cert
-            String subject = cert.getSubjectDN().getName();
-            assertThat(subject.toLowerCase())
-                    .as("Subject should contain google")
-                    .containsAnyOf("google", "*.google");
-        } else {
-            System.out.println("[SKIP] Could not connect to www.google.com (network issue)");
-        }
-    }
-
-    @Test
-    @Order(21)
-    @DisplayName("Check github.com SSL certificate")
-    void testCheckGitHubSSLCertificate() {
-        // Given
-        String domain = "github.com";
-
-        // When
-        X509Certificate[] certs = func.checkSSLCertificate(domain, domain, 443);
-
-        // Then
-        if (certs.length > 0) {
-            assertThat(certs).isNotEmpty();
-
-            System.out.println("\n=== GitHub SSL Certificate ===");
-            X509Certificate cert = certs[0];
-            System.out.println("Subject: " + cert.getSubjectDN().getName());
-            System.out.println("Issuer: " + cert.getIssuerDN().getName());
-            System.out.println("Valid until: " + cert.getNotAfter());
-        } else {
-            System.out.println("[SKIP] Could not connect to github.com (network issue)");
-        }
-    }
-
-    @Test
-    @Order(22)
-    @DisplayName("Check naver.com SSL certificate (Korean site)")
-    void testCheckNaverSSLCertificate() {
-        // Given
-        String domain = "www.naver.com";
-
-        // When
-        X509Certificate[] certs = func.checkSSLCertificate(domain, domain, 443);
-
-        // Then
-        if (certs.length > 0) {
-            assertThat(certs).isNotEmpty();
-
-            System.out.println("\n=== Naver SSL Certificate ===");
-            X509Certificate cert = certs[0];
-            System.out.println("Subject: " + cert.getSubjectDN().getName());
-            System.out.println("Issuer: " + cert.getIssuerDN().getName());
-            System.out.println("Valid until: " + cert.getNotAfter());
-        } else {
-            System.out.println("[SKIP] Could not connect to www.naver.com (network issue)");
-        }
-    }
-
-    // ==========================================================================
-    // Full Command Execution Tests
-    // ==========================================================================
-
-    @Test
-    @Order(30)
-    @DisplayName("Execute command for github.com")
-    void testExeCommand_GitHub() throws Exception {
-        // Given
-        CommandVO command = createCommand("github.com");
-
-        // When
-        ArrayList<ResultVO> results = func.exeCommand(command);
-
-        // Then
-        assertThat(results).hasSize(1);
-
-        ResultVO result = results.get(0);
-        if (result.isOk()) {
-            JSONObject json = parseJson(result.getResult());
-
-            assertThat(json.get("domain")).isEqualTo("github.com");
-            assertThat(json.get("certs")).isInstanceOf(JSONArray.class);
-
-            JSONArray certs = (JSONArray) json.get("certs");
-            if (!certs.isEmpty()) {
-                JSONObject firstCert = (JSONObject) certs.get(0);
-                assertThat(firstCert.get("subject")).isNotNull();
-                assertThat(firstCert.get("issuer")).isNotNull();
-                assertThat(firstCert.get("notafter")).isNotNull();
-
-                System.out.println("\n=== github.com via exeCommand ===");
-                System.out.println("Subject: " + firstCert.get("subject"));
-                System.out.println("Issuer: " + firstCert.get("issuer"));
-            }
-        } else {
-            System.out.println("[SKIP] Could not connect to github.com");
-        }
-    }
-
-    @Test
-    @Order(31)
-    @DisplayName("Execute command with custom port")
-    void testExeCommand_WithPort() throws Exception {
-        // Given: localhost:8443 (mock_server with --ssl)
+        // exeCommand connects to 127.0.0.1 with SNI=localhost
         CommandVO command = createCommand("localhost:8443");
 
         // When
@@ -269,24 +130,43 @@ class SSLCertiFuncTest {
         assertThat(results).hasSize(1);
 
         ResultVO result = results.get(0);
-        if (result.isOk()) {
-            JSONObject json = parseJson(result.getResult());
-            assertThat(json.get("domain")).isEqualTo("localhost:8443");
+        assertThat(result.isOk())
+                .as("Should successfully retrieve certificate from localhost:8443")
+                .isTrue();
 
-            System.out.println("\n=== localhost:8443 via exeCommand ===");
-            System.out.println("Result: " + result.getResult());
-        } else {
-            System.out.println("[INFO] No SSL server on localhost:8443");
-            System.out.println("[INFO] To test, run: python test-server/mock_server.py --ssl");
-        }
+        JSONObject json = parseJson(result.getResult());
+        assertThat(json.get("domain")).isEqualTo("localhost:8443");
+
+        JSONArray certs = (JSONArray) json.get("certs");
+        assertThat(certs)
+                .as("Should have at least one certificate")
+                .isNotEmpty();
+
+        JSONObject firstCert = (JSONObject) certs.get(0);
+        String subject = (String) firstCert.get("subject");
+
+        assertThat(subject)
+                .as("Subject should contain localhost")
+                .contains("localhost");
+
+        System.out.println("\n=== localhost:8443 via exeCommand ===");
+        System.out.println("Subject: " + firstCert.get("subject"));
+        System.out.println("Issuer: " + firstCert.get("issuer"));
+        System.out.println("Valid until: " + firstCert.get("notafter"));
     }
 
+    // Note: Wildcard domain (*) test is not possible via exeCommand or checkSSLCertificate
+    // because * is used as SNI hostname which requires valid LDH ASCII characters.
+    // The wildcard matching in isCertificateValidForDomain (if domain.equals("*")) would work
+    // for filtering, but the current implementation uses the same domain for both SNI and filtering.
+
     @Test
-    @Order(32)
-    @DisplayName("Execute command for invalid domain returns empty certs")
-    void testExeCommand_InvalidDomain() throws Exception {
+    @Order(12)
+    @EnabledIfEnvironmentVariable(named = "SSL_CERT_INTEGRATION_TEST", matches = "true")
+    @DisplayName("exeCommand: Verify certificate details")
+    void testExeCommand_VerifyCertificateDetails() throws Exception {
         // Given
-        CommandVO command = createCommand("invalid.domain.that.does.not.exist.example:443");
+        CommandVO command = createCommand("localhost:8443");
 
         // When
         ArrayList<ResultVO> results = func.exeCommand(command);
@@ -295,37 +175,120 @@ class SSLCertiFuncTest {
         assertThat(results).hasSize(1);
 
         ResultVO result = results.get(0);
-        assertThat(result.isOk()).isTrue();  // Function returns OK with empty certs
+        assertThat(result.isOk()).isTrue();
 
         JSONObject json = parseJson(result.getResult());
         JSONArray certs = (JSONArray) json.get("certs");
-        assertThat(certs).isEmpty();
+        assertThat(certs).isNotEmpty();
 
-        System.out.println("[Invalid Domain] Result: empty certs array (expected)");
+        JSONObject cert = (JSONObject) certs.get(0);
+
+        // Verify all expected fields are present
+        assertThat(cert.get("index")).as("index").isNotNull();
+        assertThat(cert.get("subject")).as("subject").isNotNull();
+        assertThat(cert.get("issuer")).as("issuer").isNotNull();
+        assertThat(cert.get("notbefore")).as("notbefore").isNotNull();
+        assertThat(cert.get("notafter")).as("notafter").isNotNull();
+        assertThat(cert.get("serial")).as("serial").isNotNull();
+
+        // Verify certificate is from our test CA
+        String issuer = (String) cert.get("issuer");
+        assertThat(issuer)
+                .as("Issuer should be Leebalso Test CA")
+                .contains("Leebalso");
+
+        System.out.println("\n=== Certificate Details ===");
+        System.out.println("Index: " + cert.get("index"));
+        System.out.println("Subject: " + cert.get("subject"));
+        System.out.println("Issuer: " + cert.get("issuer"));
+        System.out.println("Serial: " + cert.get("serial"));
+        System.out.println("Not Before: " + cert.get("notbefore"));
+        System.out.println("Not After: " + cert.get("notafter"));
+    }
+
+    @Test
+    @Order(13)
+    @EnabledIfEnvironmentVariable(named = "SSL_CERT_INTEGRATION_TEST", matches = "true")
+    @DisplayName("exeCommand: Connection to non-existent port returns empty certs")
+    void testExeCommand_NonExistentPort() throws Exception {
+        // Given: Port 9999 should not have SSL server
+        CommandVO command = createCommand("localhost:9999");
+
+        // When
+        ArrayList<ResultVO> results = func.exeCommand(command);
+
+        // Then: Should return OK with empty certs (not throw exception)
+        assertThat(results).hasSize(1);
+
+        ResultVO result = results.get(0);
+        assertThat(result.isOk()).isTrue();
+
+        JSONObject json = parseJson(result.getResult());
+        JSONArray certs = (JSONArray) json.get("certs");
+        assertThat(certs)
+                .as("Should return empty certs for non-existent port")
+                .isEmpty();
+
+        System.out.println("[Non-existent Port] Result: empty certs (expected)");
+    }
+
+    @Test
+    @Order(14)
+    @EnabledIfEnvironmentVariable(named = "SSL_CERT_INTEGRATION_TEST", matches = "true")
+    @DisplayName("exeCommand: Domain mismatch returns empty certs for that domain")
+    void testExeCommand_DomainMismatch() throws Exception {
+        // Given: Request cert for "google.com" but server has "localhost" cert
+        // exeCommand connects to 127.0.0.1:8443 with SNI=google.com
+        CommandVO command = createCommand("google.com:8443");
+
+        // When
+        ArrayList<ResultVO> results = func.exeCommand(command);
+
+        // Then: Should return OK but with empty certs (domain doesn't match)
+        assertThat(results).hasSize(1);
+
+        ResultVO result = results.get(0);
+        assertThat(result.isOk()).isTrue();
+
+        JSONObject json = parseJson(result.getResult());
+        JSONArray certs = (JSONArray) json.get("certs");
+
+        // The server cert is for "localhost", not "google.com"
+        // So isCertificateValidForDomain should filter it out
+        assertThat(certs)
+                .as("Should return empty certs when domain doesn't match certificate")
+                .isEmpty();
+
+        System.out.println("[Domain Mismatch] google.com:8443 -> empty certs (expected)");
     }
 
     // ==========================================================================
-    // Wildcard Certificate Tests
+    // checkSSLCertificate Direct Tests (for unit testing the method)
     // ==========================================================================
 
     @Test
-    @Order(40)
-    @DisplayName("Check wildcard certificate matching")
-    void testWildcardCertificate() {
-        // Given: Using * as domain to match any cert
-        String domain = "*";
+    @Order(20)
+    @EnabledIfEnvironmentVariable(named = "SSL_CERT_INTEGRATION_TEST", matches = "true")
+    @DisplayName("checkSSLCertificate: Direct call to 127.0.0.1:8443")
+    void testCheckSSLCertificate_Direct() {
+        // Given: Direct call like exeCommand does internally
+        String domain = "localhost";
+        String ip = "127.0.0.1";
+        int port = 8443;
 
         // When
-        X509Certificate[] certs = func.checkSSLCertificate("www.google.com", "www.google.com", 443);
+        X509Certificate[] certs = func.checkSSLCertificate(domain, ip, port);
 
-        // Then: With * domain, should match any certificate
-        if (certs.length > 0) {
-            // The printValidCerts should handle * domain
-            ResultVO result = func.printValidCerts(domain, certs);
-            assertThat(result.isOk()).isTrue();
+        // Then
+        assertThat(certs)
+                .as("Should retrieve certificates from local SSL server")
+                .isNotEmpty();
 
-            System.out.println("[Wildcard] Got " + certs.length + " certificates with * domain");
-        }
+        X509Certificate cert = certs[0];
+        System.out.println("\n=== checkSSLCertificate Direct ===");
+        System.out.println("Subject: " + cert.getSubjectDN().getName());
+        System.out.println("Issuer: " + cert.getIssuerDN().getName());
+        System.out.println("Valid: " + cert.getNotBefore() + " to " + cert.getNotAfter());
     }
 
     // ==========================================================================
