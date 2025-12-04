@@ -22,18 +22,19 @@ public final class Config implements ConfigurationProvider {
 
 	private static final Config INSTANCE = new Config();
 
-	private String agent_version = readVersionFromManifest();
+	private String agent_version = readVersionFromProperties();
 	private String agent_type = "JAVAAGENT";
 
 	/**
-	 * Read version from MANIFEST.MF (Implementation-Version)
+	 * Read version from version.properties file
 	 * Falls back to DEV version if not found (e.g., running from IDE)
 	 */
-	private static String readVersionFromManifest() {
+	private static String readVersionFromProperties() {
 		try {
-			Package pkg = Config.class.getPackage();
-			String version = pkg.getImplementationVersion();
-			if (version != null && !version.isEmpty()) {
+			Properties props = new Properties();
+			props.load(Config.class.getClassLoader().getResourceAsStream("version.properties"));
+			String version = props.getProperty("agent.version");
+			if (version != null && !version.isEmpty() && !version.contains("${")) {
 				return version;
 			}
 		} catch (Exception e) {

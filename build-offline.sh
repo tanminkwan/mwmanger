@@ -50,6 +50,9 @@ fi
 rm sources.txt
 echo "Compilation successful!"
 
+# 4.5. Create version.properties
+echo "agent.version=$VERSION" > build/classes/version.properties
+
 # 4. Manifest 생성
 echo "[4/5] Creating manifest..."
 cat > build/MANIFEST.MF << EOF

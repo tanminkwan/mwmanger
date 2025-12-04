@@ -46,6 +46,9 @@ if errorlevel 1 (
 del sources.txt
 echo Compilation successful!
 
+REM 4.5. Create version.properties
+echo agent.version=%VERSION% > build\classes\version.properties
+
 REM 5. Manifest 생성
 echo [4/5] Creating manifest...
 (
