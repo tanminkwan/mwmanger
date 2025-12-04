@@ -8,6 +8,48 @@ MwManger 프로젝트의 테스트 가이드입니다.
 - [테스트 작성 가이드](#테스트-작성-가이드)
 - [CI/CD 통합](#cicd-통합)
 
+## JAR 실행 테스트
+
+### agent.properties 설정
+
+JAR 파일을 직접 실행해서 테스트하려면 프로젝트 루트에 `agent.properties` 파일이 필요합니다.
+
+```bash
+# 테스트용 설정 파일 복사
+cp test-server/test-agent.properties agent.properties
+```
+
+> **참고**: `agent.properties`는 `.gitignore`에 포함되어 있어 커밋되지 않습니다.
+
+### 테스트용 설정 파일 위치
+
+| 파일 | 위치 | 용도 |
+|------|------|------|
+| `test-agent.properties` | `src/test/resources/` | 단위 테스트용 |
+| `test-agent.properties` | `test-server/` | mTLS 통합 테스트용 |
+| `agent.properties` | `deploy/` | 배포 템플릿 |
+
+### JAR 실행 테스트 방법
+
+```bash
+# 1. 빌드
+mvn clean package -DskipTests
+# 또는
+./build-offline.bat  # Windows
+./build-offline.sh   # Linux/Mac
+
+# 2. agent.properties 준비
+cp test-server/test-agent.properties agent.properties
+
+# 3. JAR 실행 (lib 폴더 필요)
+java -cp "build/mwmanger-*.jar;lib/*" mwmanger.MwAgent
+
+# 4. 버전 확인만 하려면
+java -cp "build/mwmanger-*.jar;lib/*" -e "import mwmanger.common.Config; System.out.println(Config.getConfig().getAgent_version());"
+```
+
+---
+
 ## 테스트 환경 설정
 
 ### 필수 요구사항
