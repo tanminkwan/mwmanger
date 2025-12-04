@@ -29,13 +29,20 @@ import mwmanger.lifecycle.AgentLifecycleManager;
  */
 public class MwAgent {
 
-    private static final Logger logger = getConfig().getLogger();
+    private static Logger logger;
 
     public static void main(String[] args) {
 
         try {
-            // Initialize configuration
-            getConfig().setConfig();
+            // Initialize configuration first (creates logger)
+            long configResult = getConfig().setConfig();
+            if (configResult < 0) {
+                // Error already logged in Config.setConfig()
+                System.exit(1);
+            }
+
+            // Get logger after config is initialized
+            logger = getConfig().getLogger();
 
             // Initialize ApplicationContext (DI Container)
             ApplicationContext.getInstance().initialize();
@@ -64,7 +71,12 @@ public class MwAgent {
             System.exit(0);
 
         } catch (Exception e) {
-            logger.log(Level.SEVERE, "Agent failed to start", e);
+            // Logger is always available (created at start of setConfig)
+            if (logger != null) {
+                logger.log(Level.SEVERE, "Agent failed to start", e);
+            } else {
+                getConfig().getLogger().log(Level.SEVERE, "Agent failed to start", e);
+            }
             System.exit(1);
         }
     }

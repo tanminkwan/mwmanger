@@ -215,19 +215,34 @@ public final class Config implements ConfigurationProvider {
     public long setConfig() {
 
 		Properties prop = new Properties();
-		
+
 		String host_name_var = "";
 		String user_name_var = "";
-		
+
 		int rtn = 0;
-		
+
+		// Create default logger first (logs to current directory)
+		try {
+			Logger defaultLogger = Logger.getLogger("Hennry");
+			defaultLogger.setLevel(Level.INFO);
+			FileHandler defaultFh = new FileHandler(System.getProperty("user.dir") + File.separator + "mwagent.%u.%g.log", 1024*1024, 10, true);
+			defaultFh.setFormatter(new SimpleFormatter());
+			defaultLogger.addHandler(defaultFh);
+			setLogger(defaultLogger);
+		} catch (IOException e) {
+			// If even default logger fails, use console logger
+			Logger consoleLogger = Logger.getLogger("Hennry");
+			consoleLogger.setLevel(Level.INFO);
+			setLogger(consoleLogger);
+		}
+
 		try{
-			
+
 			FileReader in = new FileReader("agent.properties");
 			prop.load(in);
-			
+
 			in.close();
-			
+
 			int command_check_cycle = Integer.parseInt(prop.getProperty("command_check_cycle", "60"));
 			String get_command_uri = prop.getProperty("get_command_uri");
 			String post_agent_uri = prop.getProperty("post_agent_uri");
@@ -236,7 +251,7 @@ public final class Config implements ConfigurationProvider {
 			user_name_var = prop.getProperty("user_name_var");
 			String log_dir = prop.getProperty("log_dir", System.getProperty("user.dir"));
 			String log_level = prop.getProperty("log_level", "INFO");
-			
+
 			setServer_url(prop.getProperty("server_url"));
 			setCommand_check_cycle(command_check_cycle);
 			setGet_command_uri(get_command_uri);
@@ -254,33 +269,34 @@ public final class Config implements ConfigurationProvider {
 			setSecurityCommandInjectionCheck(Boolean.parseBoolean(prop.getProperty("security.command_injection_check", "false")));
 			setSecurityPathTraversalCheck(Boolean.parseBoolean(prop.getProperty("security.path_traversal_check", "true")));
 
-			//Create Logger
-			Logger logger = Logger.getLogger("Hennry");
+			// Reconfigure logger with settings from properties file
+			Logger logger = getLogger();
 			logger.setLevel(Level.parse(log_level));
-			FileHandler fh = new FileHandler(log_dir + File.separator + "mwagent.%u.%g.log", 1024*1024, 10, true);
-			
-			SimpleFormatter sf = new SimpleFormatter();
-			fh.setFormatter(sf);
-			logger.addHandler(fh);
-			
-			setLogger(logger);
+
+			// Add file handler with configured log_dir if different from default
+			if (!log_dir.equals(System.getProperty("user.dir"))) {
+				FileHandler fh = new FileHandler(log_dir + File.separator + "mwagent.%u.%g.log", 1024*1024, 10, true);
+				fh.setFormatter(new SimpleFormatter());
+				logger.addHandler(fh);
+			}
+
 			getLogger().info("Logger is activated.");
-			
+
 			//Get access token
 			rtn = Common.updateToken();
-			
+
 			if(rtn < 0){
 				getLogger().severe("Update Token error occurred.");
 				System.exit(0);
 			}
-			
+
 			getLogger().info("Access Token is updated.");
-			
+
 		}catch(IOException e){
-        	getLogger().log(Level.SEVERE, e.getMessage(), e);
+			getLogger().log(Level.SEVERE, "Failed to load configuration. Please ensure 'agent.properties' file exists in the current directory.", e);
 			return -1;
 		}catch(IllegalArgumentException e){
-        	getLogger().log(Level.SEVERE, e.getMessage(), e);
+			getLogger().log(Level.SEVERE, "Configuration error: " + e.getMessage(), e);
 			return -2;
 		}
 		
