@@ -20,9 +20,7 @@ echo.
 REM 1. Clean
 echo [1/5] Cleaning build directory...
 if exist build\classes rmdir /s /q build\classes
-if exist build\jar rmdir /s /q build\jar
 mkdir build\classes
-mkdir build\jar
 
 REM 2. Classpath 설정
 echo [2/5] Setting up classpath...
@@ -55,13 +53,14 @@ echo Manifest-Version: 1.0
 echo Main-Class: %MAIN_CLASS%
 echo Implementation-Version: %VERSION%
 echo Class-Path: bcprov-jdk15on-1.70.jar commons-codec-1.11.jar commons-logging-1.2.jar httpclient-4.5.13.jar httpcore-4.4.13.jar json-simple-1.1.1.jar kafka-clients-3.1.0.jar lz4-java-1.8.0.jar slf4j-api-1.7.30.jar slf4j-simple-1.7.30.jar snappy-java-1.1.8.4.jar zstd-jni-1.5.2-1.jar
-) > build\jar\MANIFEST.MF
+) > build\MANIFEST.MF
 
 REM 6. JAR 패키징
 echo [5/5] Creating JAR package...
 cd build\classes
-jar cvfm "..\jar\%PROJECT_NAME%-%VERSION%.jar" ..\jar\MANIFEST.MF .
+jar cvfm "..\%PROJECT_NAME%-%VERSION%.jar" ..\MANIFEST.MF .
 cd ..\..
+del build\MANIFEST.MF
 
 echo.
 echo =========================================
@@ -69,11 +68,10 @@ echo   Build Complete!
 echo =========================================
 echo.
 echo Generated files:
-echo   - build\jar\%PROJECT_NAME%-%VERSION%.jar
+echo   - build\%PROJECT_NAME%-%VERSION%.jar
 echo.
 echo To run:
-echo   java -jar build\jar\%PROJECT_NAME%-%VERSION%.jar
+echo   java -jar build\%PROJECT_NAME%-%VERSION%.jar
 echo.
 echo Note: lib\*.jar files must be in the same directory
 echo.
-pause

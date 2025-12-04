@@ -19,8 +19,8 @@ echo ""
 
 # 1. Clean
 echo "[1/5] Cleaning build directory..."
-rm -rf build/classes build/jar
-mkdir -p build/classes build/jar
+rm -rf build/classes
+mkdir -p build/classes
 
 # 2. Classpath 설정
 echo "[2/5] Setting up classpath..."
@@ -52,7 +52,7 @@ echo "Compilation successful!"
 
 # 4. Manifest 생성
 echo "[4/5] Creating manifest..."
-cat > build/jar/MANIFEST.MF << EOF
+cat > build/MANIFEST.MF << EOF
 Manifest-Version: 1.0
 Main-Class: $MAIN_CLASS
 Implementation-Version: $VERSION
@@ -62,8 +62,9 @@ EOF
 # 5. JAR 패키징
 echo "[5/5] Creating JAR package..."
 cd build/classes
-jar cvfm "../jar/$PROJECT_NAME-$VERSION.jar" ../jar/MANIFEST.MF .
+jar cvfm "../$PROJECT_NAME-$VERSION.jar" ../MANIFEST.MF .
 cd ../..
+rm build/MANIFEST.MF
 
 echo ""
 echo "========================================="
@@ -71,9 +72,9 @@ echo "  Build Complete!"
 echo "========================================="
 echo ""
 echo "Generated files:"
-echo "  - build/jar/$PROJECT_NAME-$VERSION.jar"
+echo "  - build/$PROJECT_NAME-$VERSION.jar"
 echo ""
 echo "To run:"
-echo "  java -jar build/jar/$PROJECT_NAME-$VERSION.jar"
+echo "  java -jar build/$PROJECT_NAME-$VERSION.jar"
 echo ""
 echo "Note: lib/*.jar files must be in the same directory"
