@@ -22,7 +22,7 @@ MwManger는 Leebalso(리발소) 프로젝트의 에이전트 프로그램으로,
 
 MwManger는 분산 환경의 서버 관리를 자동화하기 위한 에이전트 프로그램입니다. 중앙 Leebalso 서버의 지시에 따라 다양한 작업을 수행하며, 실시간 명령 수신 및 결과 전송을 지원합니다.
 
-**버전**: 0000.0009.0005
+**버전**: 0000.0009.0006
 **타입**: JAVAAGENT
 
 ## 주요 특징
@@ -105,7 +105,7 @@ download-dependencies.bat
 build-offline.bat
 
 # 생성된 파일
-build/jar/mwmanger-0000.0009.0005.jar
+build/jar/mwmanger-0000.0009.0006.jar
 ```
 
 자세한 내용은 [lib/README.md](lib/README.md) 참조
@@ -120,7 +120,7 @@ mvn clean package
 mvn test
 
 # 생성된 파일
-target/mwmanger-0000.0009.0005-jar-with-dependencies.jar
+target/mwmanger-0000.0009.0006-jar-with-dependencies.jar
 ```
 
 ### Gradle 사용 (온라인 환경)
@@ -133,7 +133,7 @@ gradle fatJar
 gradle test
 
 # 생성된 파일
-build/libs/mwmanger-all-0000.0009.0005.jar
+build/libs/mwmanger-all-0000.0009.0006.jar
 ```
 
 ## 버전 관리
@@ -982,11 +982,33 @@ cd test-server && generate-certs.bat
 python mock_server.py --ssl
 ```
 
-**다음 단계 (Phase 5):**
-- TokenRefreshService 분리
-- CommandPollingService 분리
-- HealthCheckService 분리
-- 메트릭/모니터링 추가
+### Phase 5: Biz Service & Integration Testing (2025-12-04)
+
+**완료 항목:**
+- ✅ Sample Biz Service 구현 (Flask + PyJWT)
+  - JWT 토큰 검증 데코레이터 (`@require_token`, `@require_scope`)
+  - OAuth2 Token Introspection 지원
+  - API 엔드포인트: `/api/whoami`, `/api/commands`, `/api/results`, `/api/config`
+- ✅ BizServiceIntegrationTest 구현 (E2E 흐름 테스트)
+- ✅ SSLCertiFunc/SSLCertiFileFunc 테스트 구현
+  - 로컬 SSL 서버를 통한 인증서 검사 테스트
+  - SNI 기반 인증서 필터링 검증
+- ✅ mTLS-JWT 인증 흐름 문서화
+- ✅ 토큰 검증 아키텍처 문서화
+
+**새로운 테스트 서버:**
+```bash
+# Biz Service 실행
+cd biz-service && python app.py
+
+# SSL 모드 Mock Server
+cd test-server && python mock_server.py --ssl
+```
+
+**문서:**
+- [docs/mTLS-JWT-Authentication-Flow.md](docs/mTLS-JWT-Authentication-Flow.md)
+- [docs/Token-Validation-Architecture.md](docs/Token-Validation-Architecture.md)
+- [biz-service/README.md](biz-service/README.md)
 
 자세한 내용은 [WORK_HISTORY.md](WORK_HISTORY.md) 참조
 
@@ -996,7 +1018,7 @@ python mock_server.py --ssl
 
 ---
 
-**Last Updated**: 2025-12-03
-**Version**: 0000.0009.0005
-**Architecture**: Phase 4 - mTLS Test Environment
-**Test Coverage**: 187 tests (100% passing)
+**Last Updated**: 2025-12-04
+**Version**: 0000.0009.0006
+**Architecture**: Phase 5 - Biz Service & Integration Testing
+**Test Coverage**: 200+ tests (100% passing)

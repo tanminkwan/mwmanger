@@ -1,6 +1,90 @@
 # Work History - MwManger Agent
 
-## 2025-11-20 (오늘 작업)
+## 2025-12-04 - Phase 5: Biz Service & Integration Testing (v0.9.6)
+
+### 작업 브랜치
+- `refactoring_major_202511` 브랜치에서 작업
+
+### 완료된 작업
+
+#### 1. Sample Biz Service 구현
+- ✅ Flask 기반 Biz Service 생성 (`biz-service/`)
+  - `app.py` - Flask API 엔드포인트
+  - `token_validator.py` - JWT 토큰 검증 데코레이터
+  - `config.py` - 설정 파일
+- ✅ JWT 토큰 검증 구현 (PyJWT)
+  - `@require_token` - Bearer 토큰 검증
+  - `@require_scope` - scope 기반 권한 검증
+- ✅ API 엔드포인트
+  - `/api/whoami` - 에이전트 정보 반환
+  - `/api/commands` - 명령 조회
+  - `/api/results` - 결과 전송
+  - `/api/config` - 설정 조회
+
+#### 2. Integration Tests 구현
+- ✅ `BizServiceIntegrationTest.java` - E2E 테스트
+  - Auth Server → Biz Service 토큰 흐름 검증
+  - 10개 테스트 케이스 (모두 통과)
+- ✅ `SSLCertiFuncTest.java` - SSL 인증서 테스트
+  - exeCommand를 통한 localhost SSL 테스트
+  - SNI 기반 도메인 필터링 검증
+  - 9개 테스트 케이스 (모두 통과)
+- ✅ `SSLCertiFileFuncTest.java` - 인증서 파일 테스트
+  - 로컬 .crt 파일 파싱 테스트
+  - 6개 테스트 케이스 (모두 통과)
+
+#### 3. 문서화
+- ✅ `docs/mTLS-JWT-Authentication-Flow.md`
+  - mTLS 인증서 구조 설명
+  - Certificate DN → JWT Claims 매핑
+  - 검증 흐름 다이어그램
+- ✅ `docs/Token-Validation-Architecture.md`
+  - Token Introspection vs Redis 방식 비교
+  - mTLS 기반 서비스간 신뢰 구조
+- ✅ `biz-service/README.md` - Biz Service 사용 가이드
+
+#### 4. 테스트 환경 개선
+- ✅ Mock Server SSL 모드 (`--ssl` 옵션)
+- ✅ 테스트 환경 변수 기반 실행
+  - `SSL_CERT_INTEGRATION_TEST=true`
+  - `BIZ_SERVICE_INTEGRATION_TEST=true`
+
+### 버전 업데이트
+- **0000.0009.0005** → **0000.0009.0006**
+- pom.xml, build.gradle 업데이트
+
+### 테스트 결과
+```
+Total Tests: 200+
+✓ Unit Tests: 187 (기존)
+✓ BizServiceIntegrationTest: 10
+✓ SSLCertiFuncTest: 9
+✓ SSLCertiFileFuncTest: 6
+```
+
+### 새로운 파일
+```
+biz-service/
+├── app.py
+├── config.py
+├── token_validator.py
+├── requirements.txt
+└── README.md
+
+docs/
+├── mTLS-JWT-Authentication-Flow.md
+└── Token-Validation-Architecture.md
+
+src/test/java/mwmanger/
+├── integration/BizServiceIntegrationTest.java
+└── agentfunction/
+    ├── SSLCertiFuncTest.java
+    └── SSLCertiFileFuncTest.java
+```
+
+---
+
+## 2025-11-20 (이전 작업)
 
 ### 작업 브랜치
 - `refactoring_major_202511` 브랜치에서 작업
