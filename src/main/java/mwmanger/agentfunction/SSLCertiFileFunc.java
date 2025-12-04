@@ -58,7 +58,6 @@ public class SSLCertiFileFunc  implements AgentFunc {
 					
 				}
 				
-				//System.out.println("[Cetri2]"+result);
 				is = new ByteArrayInputStream(result.getBytes());
 			}else{
 				is = new FileInputStream(param);
@@ -69,15 +68,6 @@ public class SSLCertiFileFunc  implements AgentFunc {
 			
 	    	StringBuilder json = new StringBuilder();
 	        
-	        //System.out.println("getType : "+cer.getType());
-			//System.out.println("getVersion : "+Integer.toString(cer.getVersion()));
-			//System.out.println("getNotAfter : "+cer.getNotAfter().toString());
-			//System.out.println("getNotBefore : "+cer.getNotBefore().toString());
-			//System.out.println("getSubjectDN : "+cer.getSubjectDN().getName());
-			//System.out.println("getSerialNumber : "+cer.getSerialNumber().toString());
-			//System.out.println("getSerialNumber 16 : "+cer.getSerialNumber().toString(16));
-			//System.out.println("getSerialNumber 16 z: "+String.format("%032X", cer.getSerialNumber()));
-			//System.out.println("getIssuerDN : "+cer.getIssuerDN().getName());
 	            
 			json.append("{");
 			json.append("\"certifile\":\"" + Common.escape(param) + "\",");

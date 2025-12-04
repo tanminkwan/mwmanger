@@ -345,16 +345,6 @@ public class SSLCertiFunc implements AgentFunc {
             int i = 0;
     		for(X509Certificate c:certs){
     			i++;
-    			//System.out.println("getType : "+c.getType());
-    			//System.out.println("getVersion : "+Integer.toString(c.getVersion()));
-    			//System.out.println("getNotAfter : "+c.getNotAfter().toString());
-    			//System.out.println("getNotBefore : "+c.getNotBefore().toString());
-    			//System.out.println("getSubjectDN : "+c.getSubjectDN().getName());
-    			//System.out.println("getSerialNumber : "+c.getSerialNumber().toString());
-    			//System.out.println("getSerialNumber 16 : "+c.getSerialNumber().toString(16));
-    			//System.out.println("getSerialNumber 16 z: "+String.format("%032X", c.getSerialNumber()));
-    			//System.out.println("getIssuerDN : "+c.getIssuerDN().getName());
-                
     			json.append("{");
     			json.append("\"index\":\""+Integer.toString(i)+"\",");
     			json.append("\"notafter\":\""+c.getNotAfter().toString()+"\",");

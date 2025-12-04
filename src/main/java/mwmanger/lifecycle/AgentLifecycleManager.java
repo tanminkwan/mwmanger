@@ -248,7 +248,7 @@ public class AgentLifecycleManager implements AgentLifecycle {
     }
 
     /**
-     * 서버에서 명령 조회 (MainWork.suckCommands() 로직)
+     * 서버에서 명령 조회 (MainWork.fetchPendingCommands() 로직)
      */
     private RawCommandsVO pollCommands() {
         RawCommandsVO rcv = new RawCommandsVO();
