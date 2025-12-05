@@ -2,6 +2,37 @@
 
 이 문서는 mTLS 인증서에 포함된 정보와 인증서버에서 JWT 토큰 생성 시 이를 어떻게 참조하는지 설명합니다.
 
+> **대상 독자**: 인증 서버(Auth Server) 및 CA 서버 개발팀
+>
+> **목적**: MwManger Agent가 사용하는 인증 체계의 정확한 spec 제공
+
+---
+
+## 시스템 구성 요약
+
+```
+┌─────────────────┐     ┌─────────────────┐     ┌─────────────────┐
+│    CA Server    │     │   Auth Server   │     │   Biz Service   │
+│  (인증서 발급)   │     │  (토큰 발급)     │     │  (업무 서비스)   │
+└────────┬────────┘     └────────┬────────┘     └────────┬────────┘
+         │                       │                       │
+         │ 인증서 발급            │ 토큰 발급/검증         │ API 제공
+         ▼                       ▼                       ▼
+┌─────────────────────────────────────────────────────────────────┐
+│                        MwManger Agent                           │
+│  - mTLS 클라이언트 인증서로 Auth Server에 인증                    │
+│  - JWT Access Token으로 Biz Service API 호출                     │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 각 서버의 역할
+
+| 서버 | 역할 | 구현 필요 사항 |
+|------|------|---------------|
+| **CA Server** | Agent/Server 인증서 발급 및 관리 | PKI 인프라, 인증서 발급 API |
+| **Auth Server** | mTLS 인증 후 JWT 토큰 발급 | OAuth2 엔드포인트, JWT 서명 |
+| **Biz Service** | Agent에게 업무 API 제공 | JWT 토큰 검증, 비즈니스 로직 |
+
 ## 1. 인증서에 포함된 정보
 
 ### Agent 클라이언트 인증서 Subject DN 형식
@@ -290,4 +321,206 @@ public static int renewAccessTokenWithFallback() {
 
     return result;
 }
+```
+
+---
+
+## 9. Auth Server API Specification
+
+### 필수 구현 엔드포인트
+
+#### 9.1 Token Endpoint (OAuth2)
+
+**URL**: `POST /oauth2/token`
+
+**인증 방식**: mTLS (클라이언트 인증서 필수)
+
+**Content-Type**: `application/x-www-form-urlencoded`
+
+**Request Parameters**:
+
+| 파라미터 | 필수 | 값 | 설명 |
+|---------|------|-----|------|
+| `grant_type` | Y | `client_credentials` | OAuth2 grant type |
+| `scope` | N | `agent:commands agent:results` | 요청 권한 범위 |
+
+**Request 예시**:
+```http
+POST /oauth2/token HTTP/1.1
+Host: auth-server:8443
+Content-Type: application/x-www-form-urlencoded
+(mTLS 클라이언트 인증서: CN=testserver01_appuser_J)
+
+grant_type=client_credentials&scope=agent:commands%20agent:results
+```
+
+**Success Response** (HTTP 200):
+```json
+{
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "token_type": "Bearer",
+    "expires_in": 1800,
+    "scope": "agent:commands agent:results",
+    "refresh_token": "dGVzdHNlcnZlcjAxX2FwcHVzZXJfSl9yZWZyZXNo..."
+}
+```
+
+**Error Response** (HTTP 401/403):
+```json
+{
+    "error": "invalid_client",
+    "error_description": "Client certificate validation failed"
+}
+```
+
+#### 9.2 Refresh Token Endpoint
+
+**URL**: `POST /oauth2/token`
+
+**인증 방식**: Bearer Token (refresh_token)
+
+**Content-Type**: `application/x-www-form-urlencoded`
+
+**Request Parameters**:
+
+| 파라미터 | 필수 | 값 | 설명 |
+|---------|------|-----|------|
+| `grant_type` | Y | `refresh_token` | OAuth2 grant type |
+| `refresh_token` | Y | (refresh token 값) | 이전에 발급받은 refresh token |
+
+**Request 예시**:
+```http
+POST /oauth2/token HTTP/1.1
+Host: auth-server:8443
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=refresh_token&refresh_token=dGVzdHNlcnZlcjAxX2FwcHVzZXJfSl9yZWZyZXNo...
+```
+
+#### 9.3 Legacy Token Refresh (Non-mTLS)
+
+**URL**: `POST /api/v1/security/refresh`
+
+**인증 방식**: Bearer Token (refresh_token in header)
+
+**Content-Type**: `application/json`
+
+**Request Headers**:
+```http
+Authorization: Bearer {refresh_token}
+```
+
+**Request Body**:
+```json
+{
+    "agent_id": "testserver01_appuser_J"
+}
+```
+
+**Success Response** (HTTP 200):
+```json
+{
+    "result_code": "OK",
+    "access_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refresh_token": "dGVzdHNlcnZlcjAxX2FwcHVzZXJfSl9yZWZyZXNo..."
+}
+```
+
+### JWT 토큰 요구사항
+
+#### Access Token 필수 클레임
+
+```json
+{
+    "sub": "testserver01_appuser_J",    // 필수: Agent ID (인증서 CN)
+    "iss": "leebalso-auth-server",      // 필수: 발급자 식별자
+    "aud": "https://api.mwagent.example.com",  // 필수: 대상 시스템
+    "exp": 1735123456,                  // 필수: 만료 시간 (Unix timestamp)
+    "iat": 1735121656,                  // 필수: 발급 시간
+    "scope": "agent:commands agent:results",   // 필수: 권한 범위
+
+    "usertype": "agent",                // 권장: 사용자 유형 (OU에서 추출)
+    "hostname": "testserver01",         // 권장: 호스트명 (CN 파싱)
+    "username": "appuser",              // 권장: 사용자명 (CN 파싱)
+    "client_ip": "127.0.0.1"            // 권장: 인증 시점 클라이언트 IP
+}
+```
+
+#### 토큰 서명 알고리즘
+
+| 알고리즘 | 설명 | 권장 |
+|---------|------|------|
+| HS256 | HMAC + SHA256 (대칭키) | 개발/테스트용 |
+| RS256 | RSA + SHA256 (비대칭키) | **운영 권장** |
+| ES256 | ECDSA + SHA256 | 고보안 환경 |
+
+### Error Codes
+
+Agent가 처리하는 에러 코드:
+
+| HTTP Status | error | 설명 | Agent 동작 |
+|-------------|-------|------|-----------|
+| 401 | `invalid_token` | 토큰 만료/무효 | mTLS로 재인증 시도 |
+| 401 | `invalid_client` | 인증서 검증 실패 | 에러 로깅 후 종료 |
+| 403 | `insufficient_scope` | 권한 부족 | 에러 로깅 |
+| 403 | `ip_mismatch` | IP 검증 실패 | 에러 로깅 후 종료 |
+
+---
+
+## 10. CA Server Specification
+
+### 인증서 발급 요구사항
+
+#### Agent 클라이언트 인증서
+
+| 항목 | 요구사항 |
+|------|----------|
+| **Subject DN 형식** | `CN={hostname}_{username}_J, OU=agent, O={조직명}, C={국가코드}` |
+| **Key Usage** | Digital Signature, Key Encipherment |
+| **Extended Key Usage** | Client Authentication (1.3.6.1.5.5.7.3.2) |
+| **유효기간** | 1년 권장 (운영 정책에 따름) |
+| **키 알고리즘** | RSA 2048bit 이상 또는 ECDSA P-256 |
+| **파일 형식** | PKCS#12 (.p12) - 키+인증서 포함 |
+
+#### 서버 인증서 (Auth Server, Biz Service)
+
+| 항목 | 요구사항 |
+|------|----------|
+| **Subject DN 형식** | `CN={hostname}, OU={service|auth}, O={조직명}, C={국가코드}` |
+| **SAN (Subject Alternative Name)** | DNS:{hostname}, IP:{ip_address} |
+| **Key Usage** | Digital Signature, Key Encipherment |
+| **Extended Key Usage** | Server Authentication (1.3.6.1.5.5.7.3.1) |
+
+#### CA 인증서
+
+| 항목 | 요구사항 |
+|------|----------|
+| **Subject DN 형식** | `CN={CA명}, OU=CA, O={조직명}, C={국가코드}` |
+| **Key Usage** | Certificate Sign, CRL Sign |
+| **Basic Constraints** | CA:TRUE |
+| **유효기간** | 10년 이상 권장 |
+
+### 인증서 배포
+
+Agent에게 배포해야 하는 파일:
+
+| 파일 | 용도 | 형식 |
+|------|------|------|
+| `agent-{id}.p12` | Agent 클라이언트 인증서+키 | PKCS#12 |
+| `truststore.jks` | CA 인증서 (서버 검증용) | Java KeyStore |
+| `ca.crt` | CA 인증서 (PEM) | PEM |
+
+### Agent 설정 예시 (agent.properties)
+
+```properties
+# mTLS 활성화
+use_mtls=true
+
+# 클라이언트 인증서 (PKCS#12)
+client.keystore.path=/opt/agent/certs/agent-testserver01.p12
+client.keystore.password=changeit
+
+# 서버 검증용 CA 인증서
+truststore.path=/opt/agent/certs/truststore.jks
+truststore.password=changeit
 ```

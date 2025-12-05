@@ -2,6 +2,10 @@
 
 이 문서는 Biz Service가 Agent의 Access Token을 검증하는 두 가지 방식을 설명합니다.
 
+> **대상 독자**: Auth Server 및 Biz Service 개발팀
+>
+> **목적**: JWT 토큰 검증 방식 선택 및 구현 가이드
+
 ## 개요
 
 Agent가 Biz Service에 Access Token을 가지고 접근할 때, Biz Service는 토큰의 유효성을 검증해야 합니다.
@@ -547,7 +551,185 @@ token_data = rc.get(token_key)
 
 ---
 
+## Token Introspection API Specification
+
+### Auth Server 구현 필수
+
+#### Introspect Endpoint (RFC 7662)
+
+**URL**: `POST /oauth2/introspect`
+
+**인증 방식**: mTLS (Biz Service 클라이언트 인증서 필수)
+
+**Content-Type**: `application/x-www-form-urlencoded`
+
+**Request Parameters**:
+
+| 파라미터 | 필수 | 설명 |
+|---------|------|------|
+| `token` | Y | 검증할 access_token |
+| `token_type_hint` | N | `access_token` 또는 `refresh_token` |
+
+**Request 예시**:
+```http
+POST /oauth2/introspect HTTP/1.1
+Host: auth-server:8443
+Content-Type: application/x-www-form-urlencoded
+(mTLS 클라이언트 인증서: CN=biz-svc-01, OU=service)
+
+token=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+```
+
+**Active Token Response** (HTTP 200):
+```json
+{
+    "active": true,
+    "sub": "testserver01_appuser_J",
+    "scope": "agent:commands agent:results",
+    "client_id": "testserver01_appuser_J",
+    "token_type": "Bearer",
+    "exp": 1735123456,
+    "iat": 1735121656,
+    "iss": "leebalso-auth-server",
+    "aud": "https://api.mwagent.example.com",
+
+    "hostname": "testserver01",
+    "username": "appuser",
+    "usertype": "agent",
+    "client_ip": "10.0.1.100"
+}
+```
+
+**Inactive/Invalid Token Response** (HTTP 200):
+```json
+{
+    "active": false
+}
+```
+
+**Unauthorized Biz Service Response** (HTTP 401):
+```json
+{
+    "error": "unauthorized_client",
+    "error_description": "Client certificate not authorized for introspection"
+}
+```
+
+### Biz Service 인증서 검증
+
+Auth Server는 introspect 요청 시 Biz Service 인증서를 검증해야 합니다:
+
+```python
+def is_trusted_service(cert_dn):
+    """
+    Introspection 요청 허용 여부 판단
+    - OU=service인 인증서만 허용
+    - 또는 허용된 CN 목록으로 관리
+    """
+    if not cert_dn:
+        return False
+
+    # OU 기반 검증
+    ou_match = re.search(r'OU=([^,]+)', cert_dn)
+    if ou_match and ou_match.group(1) == "service":
+        return True
+
+    # 또는 허용 목록 기반 검증
+    cn_match = re.search(r'CN=([^,]+)', cert_dn)
+    if cn_match:
+        allowed_services = ["biz-svc-01", "biz-svc-02", "api-gateway"]
+        return cn_match.group(1) in allowed_services
+
+    return False
+```
+
+---
+
+## Agent → Biz Service 호출 Specification
+
+### API 호출 형식
+
+Agent가 Biz Service API를 호출할 때의 형식:
+
+**Request Headers**:
+```http
+GET /api/v1/commands HTTP/1.1
+Host: biz-service:8080
+Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+Content-Type: application/json
+X-Agent-ID: testserver01_appuser_J
+X-Agent-Version: 0000.0009.0010
+```
+
+**Biz Service 검증 순서**:
+
+1. `Authorization` 헤더에서 Bearer 토큰 추출
+2. 토큰 검증 (Introspection 또는 JWT 서명 검증)
+3. `scope` 확인 (필요한 권한 보유 여부)
+4. (선택) `X-Agent-ID` 헤더와 토큰의 `sub` 클레임 일치 확인
+
+### Scope 정의
+
+| Scope | 설명 | 허용 API |
+|-------|------|---------|
+| `agent:commands` | 명령 조회 권한 | `GET /api/v1/commands/*` |
+| `agent:results` | 결과 전송 권한 | `POST /api/v1/results/*` |
+| `agent:config` | 설정 조회 권한 | `GET /api/v1/config/*` |
+| `agent:status` | 상태 보고 권한 | `POST /api/v1/status/*` |
+
+### Error Response 형식
+
+Biz Service가 반환해야 하는 에러 형식:
+
+**401 Unauthorized** (토큰 없음/만료):
+```json
+{
+    "error": "invalid_token",
+    "error_description": "The access token is invalid or expired"
+}
+```
+
+**403 Forbidden** (권한 부족):
+```json
+{
+    "error": "insufficient_scope",
+    "error_description": "Required scope: agent:commands"
+}
+```
+
+---
+
+## 구현 체크리스트
+
+### Auth Server
+
+- [ ] `/oauth2/token` - mTLS client_credentials grant
+- [ ] `/oauth2/token` - refresh_token grant
+- [ ] `/oauth2/introspect` - 토큰 검증 (mTLS Biz Service 인증서 필수)
+- [ ] `/oauth2/revoke` - 토큰 폐기 (선택)
+- [ ] `/api/v1/security/refresh` - Legacy 토큰 갱신 (Non-mTLS 호환)
+- [ ] Agent 등록 관리 (hostname, username, allowed_ips)
+- [ ] JWT 토큰 서명 (HS256/RS256)
+
+### CA Server
+
+- [ ] CA 인증서 생성 및 관리
+- [ ] Agent 클라이언트 인증서 발급 (PKCS#12)
+- [ ] Server 인증서 발급 (Auth Server, Biz Service용)
+- [ ] 인증서 폐기 목록 (CRL) 관리 (선택)
+
+### Biz Service
+
+- [ ] JWT Bearer 토큰 추출
+- [ ] 토큰 검증 (Introspection 또는 서명 검증)
+- [ ] Scope 기반 권한 검사
+- [ ] 적절한 에러 응답 반환
+
+---
+
 ## 관련 문서
 
 - [mTLS 인증서 및 JWT 토큰 생성 흐름](./mTLS-JWT-Authentication-Flow.md)
 - [RFC 7662 - OAuth 2.0 Token Introspection](https://tools.ietf.org/html/rfc7662)
+- [RFC 6749 - OAuth 2.0 Authorization Framework](https://tools.ietf.org/html/rfc6749)
+- [RFC 7519 - JSON Web Token (JWT)](https://tools.ietf.org/html/rfc7519)
