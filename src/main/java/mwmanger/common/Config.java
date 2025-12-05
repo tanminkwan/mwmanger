@@ -22,27 +22,9 @@ public final class Config implements ConfigurationProvider {
 
 	private static final Config INSTANCE = new Config();
 
-	private String agent_version = readVersionFromProperties();
+	private String agent_version = Version.VERSION;
 	private String agent_type = "JAVAAGENT";
 
-	/**
-	 * Read version from version.properties file
-	 * Falls back to DEV version if not found (e.g., running from IDE)
-	 */
-	private static String readVersionFromProperties() {
-		try {
-			Properties props = new Properties();
-			props.load(Config.class.getClassLoader().getResourceAsStream("version.properties"));
-			String version = props.getProperty("agent.version");
-			if (version != null && !version.isEmpty() && !version.contains("${")) {
-				return version;
-			}
-		} catch (Exception e) {
-			// Ignore and use fallback
-		}
-		// Fallback for development/IDE environment
-		return "0000.0000.0000-DEV";
-	}
 	private String hostName = "";
 	private String userName = "";
 	private String server_url = "";
@@ -275,12 +257,19 @@ public final class Config implements ConfigurationProvider {
 
 			// Add file handler with configured log_dir if different from default
 			if (!log_dir.equals(System.getProperty("user.dir"))) {
+				// Check if log_dir exists
+				File logDirFile = new File(log_dir);
+				if (!logDirFile.exists() || !logDirFile.isDirectory()) {
+					logger.severe("Log directory '" + log_dir + "' does not exist. Agent will terminate.");
+					return -3;
+				}
 				FileHandler fh = new FileHandler(log_dir + File.separator + "mwagent.%u.%g.log", 1024*1024, 10, true);
 				fh.setFormatter(new SimpleFormatter());
 				logger.addHandler(fh);
 			}
 
 			getLogger().info("Logger is activated.");
+			getLogger().info("MwManger Agent version: " + getAgent_version());
 
 			//Get access token
 			rtn = Common.updateToken();

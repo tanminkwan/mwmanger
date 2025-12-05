@@ -5,15 +5,12 @@
 set -e
 
 PROJECT_NAME="mwmanger"
-# Read version from build.gradle
-VERSION=$(grep "^version = " build.gradle | sed "s/version = '\(.*\)'/\1/")
 MAIN_CLASS="mwmanger.MwAgent"
 
 echo "========================================="
 echo "  MwManger Offline Build"
 echo "========================================="
 echo "Project: $PROJECT_NAME"
-echo "Version: $VERSION"
 echo "Main Class: $MAIN_CLASS"
 echo ""
 
@@ -50,22 +47,18 @@ fi
 rm sources.txt
 echo "Compilation successful!"
 
-# 4.5. Create version.properties
-echo "agent.version=$VERSION" > build/classes/version.properties
-
 # 4. Manifest 생성
 echo "[4/5] Creating manifest..."
 cat > build/MANIFEST.MF << EOF
 Manifest-Version: 1.0
 Main-Class: $MAIN_CLASS
-Implementation-Version: $VERSION
 Class-Path: $(cd lib && ls *.jar | tr '\n' ' ')
 EOF
 
 # 5. JAR 패키징
 echo "[5/5] Creating JAR package..."
 cd build/classes
-jar cvfm "../$PROJECT_NAME-$VERSION.jar" ../MANIFEST.MF .
+jar cvfm "../$PROJECT_NAME.jar" ../MANIFEST.MF .
 cd ../..
 rm build/MANIFEST.MF
 
@@ -75,9 +68,9 @@ echo "  Build Complete!"
 echo "========================================="
 echo ""
 echo "Generated files:"
-echo "  - build/$PROJECT_NAME-$VERSION.jar"
+echo "  - build/$PROJECT_NAME.jar"
 echo ""
 echo "To run:"
-echo "  java -jar build/$PROJECT_NAME-$VERSION.jar"
+echo "  java -jar build/$PROJECT_NAME.jar"
 echo ""
 echo "Note: lib/*.jar files must be in the same directory"

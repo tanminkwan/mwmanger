@@ -10,7 +10,6 @@ public class GetRefreshToken extends Order {
 
 	public GetRefreshToken(JSONObject command) {
 		super(command);
-		// TODO Auto-generated constructor stub
 	}
 
 	public int execute() {

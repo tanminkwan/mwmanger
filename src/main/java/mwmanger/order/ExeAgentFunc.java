@@ -13,7 +13,6 @@ public class ExeAgentFunc extends Order {
 
 	public ExeAgentFunc(JSONObject command) {
 		super(command);
-		// TODO Auto-generated constructor stub
 	}
 
 	public int execute() {

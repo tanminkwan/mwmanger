@@ -6,7 +6,6 @@ public class ReadPlainFile extends ReadFile {
 
 	public ReadPlainFile(JSONObject command) {
 		super(command);
-		// TODO Auto-generated constructor stub
 	}
 
 	protected String getFileFullName(){

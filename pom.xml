@@ -7,7 +7,7 @@
 
     <groupId>com.leebalso</groupId>
     <artifactId>mwmanger</artifactId>
-    <version>0000.0009.0007</version>
+    <version>1.0</version>
     <packaging>jar</packaging>
 
     <name>MwManger Agent</name>
@@ -148,14 +148,11 @@
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.2.0</version>
                 <configuration>
+                    <finalName>mwmanger</finalName>
                     <archive>
                         <manifest>
                             <mainClass>mwmanger.MwAgent</mainClass>
-                            <addDefaultImplementationEntries>true</addDefaultImplementationEntries>
                         </manifest>
-                        <manifestEntries>
-                            <Implementation-Version>${project.version}</Implementation-Version>
-                        </manifestEntries>
                     </archive>
                 </configuration>
             </plugin>
