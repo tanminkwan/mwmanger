@@ -42,10 +42,10 @@ mvn clean package -DskipTests
 cp test-server/test-agent.properties agent.properties
 
 # 3. JAR 실행 (lib 폴더 필요)
-java -cp "build/mwmanger-*.jar;lib/*" mwmanger.MwAgent
+java -cp "build/mwmanger.jar;lib/*" mwmanger.MwAgent
 
 # 4. 버전 확인만 하려면
-java -cp "build/mwmanger-*.jar;lib/*" -e "import mwmanger.common.Config; System.out.println(Config.getConfig().getAgent_version());"
+java -cp "build/mwmanger.jar;lib/*" mwmanger.common.Version
 ```
 
 ---

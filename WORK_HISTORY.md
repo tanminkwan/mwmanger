@@ -1,5 +1,39 @@
 # Work History - MwManger Agent
 
+## 2025-12-05 - Phase 6: Code Quality Improvements (v0.9.9)
+
+### 작업 브랜치
+- `refactoring_major_202511` 브랜치에서 작업
+
+### 완료된 작업
+
+#### 1. Version 관리 단일화
+- ✅ `Version.java` 생성 - 유일한 버전 소스
+- ✅ `version.properties` 삭제
+- ✅ `Config.java` - `Version.VERSION` 참조로 변경
+- ✅ 빌드 스크립트 단순화 (버전 없는 JAR 파일명)
+
+#### 2. 코드 정리
+- ✅ Auto-generated TODO 주석 제거 (3개)
+- ✅ 불필요한 코드 제거
+
+#### 3. 빌드 시스템 개선
+- ✅ JAR 파일명 단순화: `mwmanger.jar` (버전 제외)
+- ✅ `build-offline.bat`, `build-offline.sh` 업데이트
+- ✅ `pom.xml`, `build.gradle` 업데이트
+
+#### 4. 문서 업데이트
+- ✅ `README.md` - 버전 관리 섹션 업데이트
+- ✅ `CLAUDE.md` - 프로젝트 메모리 추가
+- ✅ `WORK_HISTORY.md` - 작업 이력 추가
+
+### 테스트 결과
+- 215개 테스트 실행
+- 0개 실패
+- 7개 스킵 (통합 테스트 - 외부 서버 필요)
+
+---
+
 ## 2025-12-04 - Phase 5: Biz Service & Integration Testing (v0.9.6)
 
 ### 작업 브랜치

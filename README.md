@@ -142,57 +142,39 @@ build/libs/mwmanger-all-0000.0009.0006.jar
 
 ### 버전 관리 원칙
 
-**build.gradle**이 유일한 버전 소스(Single Source of Truth)입니다:
+**Version.java**가 유일한 버전 소스(Single Source of Truth)입니다:
 
 ```
-build.gradle (version = '0000.0009.0001')
-    ↓
-    ├─→ build-offline.sh (자동으로 읽음)
-    │       ↓
-    │   MANIFEST.MF (Implementation-Version 추가)
+src/main/java/mwmanger/common/Version.java
     │
-    ├─→ build-offline.bat (자동으로 읽음)
-    │       ↓
-    │   MANIFEST.MF (Implementation-Version 추가)
-    │
-    └─→ Gradle build (자동으로 추가)
+    └─→ Config.java (Version.VERSION 참조)
             ↓
-        MANIFEST.MF (Implementation-Version 추가)
-
-MANIFEST.MF (Implementation-Version)
-    ↓
-Config.java (런타임에 자동으로 읽음)
+        런타임에 버전 제공
 ```
 
 ### 버전 변경 방법
 
-버전을 변경하려면 **build.gradle 파일 한 곳만 수정**하면 됩니다:
+버전을 변경하려면 **Version.java 파일 한 곳만 수정**하면 됩니다:
 
-```gradle
-// build.gradle
-version = '0000.0010.0000'  // 여기만 수정!
+```java
+// src/main/java/mwmanger/common/Version.java
+public static final String VERSION = "0000.0010.0000";  // 여기만 수정!
 ```
 
-그 후 빌드하면 자동으로 모든 곳에 반영됩니다:
+그 후 빌드하면 자동으로 반영됩니다:
 
 ```bash
+# Windows (Git Bash)
+/c/Windows/System32/cmd.exe //c "cd /d C:\GitHub\mwmanger && build-offline.bat"
+
 # Linux/Mac
 ./build-offline.sh
-
-# Windows
-build-offline.bat
-
-# Gradle
-gradle build
 ```
 
-### 버전 읽기 방식
+### JAR 파일명
 
-1. **빌드 스크립트**: build.gradle에서 `version` 값을 파싱
-2. **MANIFEST.MF**: 빌드 시 `Implementation-Version` 헤더에 버전 추가
-3. **Config.java**: 런타임에 `Package.getImplementationVersion()`으로 읽음
-   - JAR 실행 시: MANIFEST.MF에서 버전 자동 로드
-   - IDE 실행 시: Fallback 버전 "0000.0000.0000-DEV" 사용
+빌드 결과물은 버전 없이 `mwmanger.jar`로 생성됩니다:
+- `build/mwmanger.jar`
 
 ### 버전 형식
 
@@ -1018,7 +1000,7 @@ cd test-server && python mock_server.py --ssl
 
 ---
 
-**Last Updated**: 2025-12-04
-**Version**: 0000.0009.0006
-**Architecture**: Phase 5 - Biz Service & Integration Testing
-**Test Coverage**: 200+ tests (100% passing)
+**Last Updated**: 2025-12-05
+**Version**: 0000.0009.0009
+**Architecture**: Phase 6 - Code Quality Improvements
+**Test Coverage**: 215 tests (100% passing)

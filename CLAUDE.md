@@ -70,4 +70,6 @@ HTTP_PROXY=http://70.10.15.10:8080 HTTPS_PROXY=http://70.10.15.10:8080 \
 1. OAuth2 token request now uses correct Content-Type (`application/x-www-form-urlencoded`)
 2. Log directory existence check added
 3. Version output at startup
-4. All 231 tests passing with 0 skipped
+4. Version management unified to Version.java (single source of truth)
+5. JAR filename simplified to `mwmanger.jar` (no version suffix)
+6. All 215 tests passing
