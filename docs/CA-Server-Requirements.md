@@ -647,58 +647,51 @@ CREATE TABLE bootstrap_token (
 
 ### 7.1 Agent 최초 등록
 
-```
-관리자                          CA Server                         Agent 서버
-─────────                      ─────────                         ───────────
-    │                              │                                  │
-    │ 1. Bootstrap Token 발급      │                                  │
-    │   POST /admin/bootstrap-token│                                  │
-    │──────────────────────────────>                                  │
-    │                              │                                  │
-    │<──────────────────────────────                                  │
-    │   Token: bt-abc123-xyz789    │                                  │
-    │                              │                                  │
-    │ 2. Token 파일 다운로드        │                                  │
-    │   GET /admin/bootstrap-token/│                                  │
-    │       bt-abc123.../download  │                                  │
-    │──────────────────────────────>                                  │
-    │                              │                                  │
-    │<──────────────────────────────                                  │
-    │   bootstrap.token 파일       │                                  │
-    │                              │                                  │
-    │ 3. Token 파일을 Agent 서버에 배포                               │
-    │   (SCP, Ansible, 수동 복사 등)                                  │
-    │─────────────────────────────────────────────────────────────────>│
-    │                              │       ./certs/bootstrap.token    │
-    │                              │                                  │
-    │                              │  4. Agent 시작                   │
-    │                              │     bootstrap.token 발견         │
-    │                              │     Keypair 생성                 │
-    │                              │     CSR 생성                     │
-    │                              │                                  │
-    │                              │<─────────────────────────────────│
-    │                              │  5. POST /cert/issue             │
-    │                              │     (CSR + Bootstrap Token)      │
-    │                              │                                  │
-    │<─────────────────────────────│                                  │
-    │  6. 승인 요청 알림           │                                  │
-    │     (이메일/Slack)           │                                  │
-    │                              │                                  │
-    │  7. 검토 후 승인             │                                  │
-    │   POST /admin/cert/approve   │                                  │
-    │──────────────────────────────>                                  │
-    │                              │                                  │
-    │                              │─────────────────────────────────>│
-    │                              │  8. 인증서 발급                  │
-    │                              │     (polling 응답)               │
-    │                              │                                  │
-    │                              │                                  │ 9. Keystore 저장
-    │                              │                                  │    (agent.p12)
-    │                              │                                  │
-    │                              │                                  │ 10. bootstrap.token
-    │                              │                                  │     자동 삭제
-    │                              │                                  │
-    │                              │                                  │ 11. 정상 시작
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Admin as 관리자
+    participant CA as CA Server
+    participant Agent as Agent 서버
+
+    rect rgb(240, 248, 255)
+        Note over Admin,CA: Bootstrap Token 발급
+        Admin->>CA: POST /admin/bootstrap-token
+        CA-->>Admin: Token: bt-abc123-xyz789
+        Admin->>CA: GET /admin/bootstrap-token/{token}/download
+        CA-->>Admin: bootstrap.token 파일
+    end
+
+    rect rgb(255, 248, 240)
+        Note over Admin,Agent: Token 파일 배포
+        Admin->>Agent: bootstrap.token 파일 배포<br/>(SCP, Ansible 등)
+        Note right of Agent: ./certs/bootstrap.token
+    end
+
+    rect rgb(240, 255, 240)
+        Note over Agent,CA: 인증서 발급 요청
+        Agent->>Agent: Agent 시작<br/>bootstrap.token 발견
+        Agent->>Agent: Keypair 생성<br/>CSR 생성
+        Agent->>CA: POST /cert/issue<br/>(CSR + Bootstrap Token)
+        CA-->>Agent: status: pending_approval<br/>request_id: req-001
+    end
+
+    rect rgb(255, 255, 240)
+        Note over Admin,CA: 관리자 승인
+        CA->>Admin: 승인 요청 알림<br/>(이메일/Slack)
+        Admin->>Admin: CN, IP 검토
+        Admin->>CA: POST /admin/cert/approve/req-001
+        CA-->>Admin: 승인 완료
+    end
+
+    rect rgb(240, 255, 240)
+        Note over Agent,CA: 인증서 수신 및 저장
+        Agent->>CA: GET /cert/status/req-001 (polling)
+        CA-->>Agent: status: approved<br/>certificate: (PEM)
+        Agent->>Agent: agent.p12 저장
+        Agent->>Agent: bootstrap.token 삭제
+        Agent->>Agent: 정상 시작
+    end
 ```
 
 **인증서 디렉토리 구조 (Agent 서버)**:
@@ -713,50 +706,65 @@ CREATE TABLE bootstrap_token (
 
 ### 7.2 Agent 인증서 갱신
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Agent as Agent 서버
+    participant CA as CA Server
+
+    rect rgb(255, 248, 240)
+        Note over Agent: 만료 임박 감지
+        Agent->>Agent: 인증서 만료 임박 감지<br/>(예: 7일 이내)
+    end
+
+    rect rgb(240, 255, 240)
+        Note over Agent: 새 인증서 준비
+        Agent->>Agent: 새 Keypair 생성
+        Agent->>Agent: 새 CSR 생성
+    end
+
+    rect rgb(240, 248, 255)
+        Note over Agent,CA: 갱신 요청 (mTLS 인증)
+        Agent->>CA: POST /cert/renew (mTLS)<br/>(기존 인증서로 인증)
+        CA->>CA: mTLS 인증서 CN 확인
+        CA->>CA: CSR Subject CN 비교
+        CA->>CA: 일치 → 자동 승인
+        CA-->>Agent: 새 인증서 발급
+    end
+
+    rect rgb(240, 255, 240)
+        Note over Agent: 인증서 교체
+        Agent->>Agent: Keystore 교체<br/>(새 Private Key + 새 인증서)
+    end
 ```
-Agent                                         CA Server
-─────────                                    ─────────
-    │                                            │
-    │ 1. 인증서 만료 임박 감지                     │
-    │    (예: 7일 이내)                           │
-    │                                            │
-    │ 2. 새 Keypair 생성                         │
-    │    새 CSR 생성                             │
-    │                                            │
-    │ 3. POST /cert/renew (mTLS)                 │
-    │    (기존 인증서로 인증)                      │
-    │────────────────────────────────────────────>
-    │                                            │
-    │                                            │ 4. mTLS 인증서 CN 확인
-    │                                            │    CSR Subject CN 비교
-    │                                            │    일치 → 자동 승인
-    │                                            │
-    │<────────────────────────────────────────────
-    │ 5. 새 인증서 발급                           │
-    │                                            │
-    │ 6. Keystore 교체                           │
-    │    (새 Private Key + 새 인증서)             │
-```
+
+**갱신 시 핵심 검증:**
+- mTLS로 기존 인증서 유효성 확인
+- CSR의 Subject CN이 기존 인증서 CN과 일치해야 함
+- 관리자 승인 없이 자동 처리
 
 ### 7.3 Auth Server / Biz Service의 CA 인증서 사용
 
-```
-Auth Server                                  CA Server
-─────────                                   ─────────
-    │                                           │
-    │ 1. GET /ca/certificate                    │
-    │───────────────────────────────────────────>
-    │                                           │
-    │<───────────────────────────────────────────
-    │ 2. CA 인증서 수신                          │
-    │                                           │
-    │ 3. Truststore에 CA 인증서 저장             │
-    │                                           │
-    │                                           │
-    │ ... Agent mTLS 연결 시 ...                 │
-    │                                           │
-    │ 4. Agent 클라이언트 인증서 검증             │
-    │    (CA 인증서로 서명 검증)                  │
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Auth as Auth Server
+    participant CA as CA Server
+    participant Agent as Agent
+
+    rect rgb(240, 248, 255)
+        Note over Auth,CA: CA 인증서 다운로드
+        Auth->>CA: GET /ca/certificate
+        CA-->>Auth: CA 인증서 (PEM)
+        Auth->>Auth: Truststore에 CA 인증서 저장
+    end
+
+    rect rgb(240, 255, 240)
+        Note over Agent,Auth: Agent mTLS 연결
+        Agent->>Auth: mTLS 연결 요청<br/>(클라이언트 인증서 제시)
+        Auth->>Auth: Agent 인증서 검증<br/>(CA 인증서로 서명 확인)
+        Auth-->>Agent: 연결 승인
+    end
 ```
 
 ---

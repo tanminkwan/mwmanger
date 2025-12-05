@@ -557,75 +557,77 @@ CSR에 포함되지 않는 정보:
 
 ### 11.1 최초 인증서 발급 흐름 (수동 승인)
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Agent as Agent 서버
+    participant CA as CA 서버
+    participant Admin as 관리자
+
+    rect rgb(240, 255, 240)
+        Note over Agent: Keypair 생성 (로컬)
+        Agent->>Agent: Keypair 생성<br/>Private Key (agent에만 존재)<br/>Public Key
+        Agent->>Agent: CSR 생성<br/>(Public Key + Subject DN)
+    end
+
+    rect rgb(240, 248, 255)
+        Note over Agent,CA: CSR 전송 (Private Key 없음!)
+        Agent->>CA: CSR 전송
+        CA->>CA: CSR 수신<br/>대기 목록에 추가
+    end
+
+    rect rgb(255, 255, 240)
+        Note over CA,Admin: 관리자 승인
+        CA->>Admin: 승인 요청 알림
+        Admin->>Admin: UI에서 검토<br/>- CN 확인<br/>- 요청 IP 확인<br/>- 담당자 확인
+        Admin->>CA: [승인] 클릭
+        CA->>CA: CA Private Key로<br/>인증서 서명
+    end
+
+    rect rgb(240, 255, 240)
+        Note over Agent,CA: 인증서 수신
+        CA-->>Agent: 인증서 (Public Key + CA 서명)
+        Agent->>Agent: Keystore에 저장<br/>Private Key (이미 있음)<br/>인증서 (새로 받음)
+    end
 ```
-Agent 서버                        CA 서버                         관리자
-───────────                      ─────────                       ─────────
-    │                                │                               │
-    │ 1. Keypair 생성 (로컬)          │                               │
-    │    ┌─────────────────┐         │                               │
-    │    │ Private Key     │         │                               │
-    │    │ (agent에만 존재) │         │                               │
-    │    │                 │         │                               │
-    │    │ Public Key      │         │                               │
-    │    └─────────────────┘         │                               │
-    │                                │                               │
-    │ 2. CSR 생성                    │                               │
-    │    (Public Key + Subject DN)   │                               │
-    │                                │                               │
-    │ 3. CSR 전송 ──────────────────→│ 4. CSR 수신                    │
-    │    (Private Key 없음!)         │    대기 목록에 추가             │
-    │                                │         │                     │
-    │                                │         ▼                     │
-    │                                │ 5. 승인 대기 ←─────────────────│ 6. UI에서 검토
-    │                                │                               │    - CN 확인
-    │                                │                               │    - 요청 IP 확인
-    │                                │                               │    - 담당자 확인
-    │                                │         │                     │
-    │                                │         ▼                     │ 7. [승인] 클릭
-    │                                │ 8. CA Private Key로            │
-    │                                │    인증서 서명                  │
-    │                                │                               │
-    │ 9. 인증서 수신 ←───────────────│                               │
-    │    (Public Key + CA 서명)      │                               │
-    │                                │                               │
-    │ 10. Keystore에 저장            │                               │
-    │     ┌─────────────────┐        │                               │
-    │     │ Private Key     │        │                               │
-    │     │ (이미 있음)      │        │                               │
-    │     │                 │        │                               │
-    │     │ 인증서          │        │                               │
-    │     │ (새로 받음)      │        │                               │
-    │     └─────────────────┘        │                               │
-```
+
+**핵심: Private Key는 Agent 서버를 떠나지 않음**
 
 ### 11.2 인증서 갱신 흐름 (자동)
 
 인증서 만료 전 자동 갱신. 이미 승인된 Agent이므로 **mTLS 인증으로 자동 처리**.
 
-```
-Agent 서버                                    CA 서버
-───────────                                  ─────────
-    │                                            │
-    │ 1. 인증서 만료 임박 감지                     │
-    │    (예: 유효기간 7일 중 5일차)               │
-    │                                            │
-    │ 2. 새 Keypair 생성 (로컬)                   │
-    │                                            │
-    │ 3. 새 CSR 생성                             │
-    │                                            │
-    │ 4. POST /api/v1/cert/renew ───────────────→│ 5. mTLS 인증 (기존 인증서)
-    │    (새 CSR + 기존 인증서로 mTLS 인증)        │
-    │                                            │ 6. CN 일치 확인
-    │                                            │    (기존 인증서 CN == CSR의 Subject)
-    │                                            │
-    │                                            │ 7. 자동 승인 (이미 등록된 Agent)
-    │                                            │
-    │                                            │ 8. 새 인증서 서명
-    │                                            │
-    │ 9. 새 인증서 수신 ←─────────────────────────│
-    │                                            │
-    │ 10. Keystore 교체                          │
-    │     (새 Private Key + 새 인증서)            │
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Agent as Agent 서버
+    participant CA as CA 서버
+
+    rect rgb(255, 248, 240)
+        Note over Agent: 만료 임박 감지
+        Agent->>Agent: 인증서 만료 임박 감지<br/>(예: 유효기간 7일 중 5일차)
+    end
+
+    rect rgb(240, 255, 240)
+        Note over Agent: 새 인증서 준비
+        Agent->>Agent: 새 Keypair 생성 (로컬)
+        Agent->>Agent: 새 CSR 생성
+    end
+
+    rect rgb(240, 248, 255)
+        Note over Agent,CA: 갱신 요청 (mTLS)
+        Agent->>CA: POST /api/v1/cert/renew<br/>(새 CSR + 기존 인증서로 mTLS 인증)
+        CA->>CA: mTLS 인증 (기존 인증서)
+        CA->>CA: CN 일치 확인<br/>(기존 인증서 CN == CSR의 Subject)
+        CA->>CA: 자동 승인 (이미 등록된 Agent)
+        CA->>CA: 새 인증서 서명
+        CA-->>Agent: 새 인증서 수신
+    end
+
+    rect rgb(240, 255, 240)
+        Note over Agent: Keystore 교체
+        Agent->>Agent: Keystore 교체<br/>(새 Private Key + 새 인증서)
+    end
 ```
 
 ### 11.3 관리자 승인 UI 예시
