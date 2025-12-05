@@ -573,9 +573,16 @@ class BootstrapTokenCreate(Resource):
 
 @ns_admin.route('/bootstrap-token/<string:token>/download')
 class BootstrapTokenDownload(Resource):
-    @ns_admin.doc(description='Download bootstrap token as file')
+    @ns_admin.doc(description='Download bootstrap token as file. '
+                              'NOTE: Swagger UI may show incorrect filename. '
+                              'For correct filename (bootstrap.token), access URL directly in browser or use curl.')
     def get(self, token):
-        """Download bootstrap token file"""
+        """Download bootstrap token file
+
+        Note: Swagger UI may download with incorrect filename.
+        For correct filename, access the URL directly in browser or use:
+        curl -o bootstrap.token "http://localhost:5000/api/v1/admin/bootstrap-token/{token}/download"
+        """
         if token not in bootstrap_tokens:
             return {'error': 'not_found', 'message': 'Token not found'}, 404
 
