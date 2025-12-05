@@ -34,6 +34,13 @@ public class MwAgent {
     public static void main(String[] args) {
 
         try {
+            // Print startup banner with version (before logger initialization)
+            String version = getConfig().getAgent_version();
+            System.out.println("=========================================");
+            System.out.println("  MwManger Agent Starting");
+            System.out.println("  Version: " + version);
+            System.out.println("=========================================");
+
             // Initialize configuration first (creates logger)
             long configResult = getConfig().setConfig();
             if (configResult < 0) {
@@ -43,6 +50,12 @@ public class MwAgent {
 
             // Get logger after config is initialized
             logger = getConfig().getLogger();
+
+            // Log version info
+            logger.info("=========================================");
+            logger.info("MwManger Agent Started");
+            logger.info("Version: " + version);
+            logger.info("=========================================");
 
             // Initialize ApplicationContext (DI Container)
             ApplicationContext.getInstance().initialize();

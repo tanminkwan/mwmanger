@@ -205,9 +205,60 @@ public class Common {
         }
         
         return mrvo;
-        
+
     }
-    
+
+    /**
+     * HTTP POST with application/x-www-form-urlencoded content type (for OAuth2 token requests)
+     */
+    public static MwResponseVO httpPOSTFormUrlEncoded(String path, String data) {
+
+    	MwResponseVO mrvo = new MwResponseVO();
+
+    	String url = config.getServer_url() + path;
+
+        try {
+
+        	HttpClient httpClient = getHttpClient(url);
+
+			HttpPost request = new HttpPost(url);
+			request.addHeader(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded");
+	        request.setEntity(new StringEntity(data));
+
+			HttpResponse response = httpClient.execute(request);
+            HttpEntity entity = response.getEntity();
+
+            mrvo.setStatusCode(response.getStatusLine().getStatusCode());
+
+            if (entity != null) {
+
+            	String value = EntityUtils.toString(entity);
+
+                JSONParser jsonPar = new JSONParser();
+                JSONObject jsonObj = null;
+
+                try {
+                	jsonObj = (JSONObject) jsonPar.parse(value);
+                }catch(ParseException e){
+                	config.getLogger().warning("JSON Parsing Error  data : "+value);
+                }
+
+                mrvo.setResponse(jsonObj);
+
+            }
+
+        } catch(IOException e){
+        	config.getLogger().warning("HTTP execution failed" + " : " + url);
+        	mrvo.setStatusCode(-104);
+        }catch(Exception e){
+        	config.getLogger().log(Level.WARNING, e.getMessage(), e);
+        	mrvo.setStatusCode(-105);
+        }
+
+        return mrvo;
+
+    }
+
     public static MwResponseVO httpGET(String path, String token) {
     	
     	MwResponseVO mrvo = new MwResponseVO();
@@ -373,7 +424,7 @@ public class Common {
             // OAuth2 standard: application/x-www-form-urlencoded
             String body = "grant_type=refresh_token&refresh_token=" + config.getRefresh_token();
 
-            MwResponseVO mrvo = Common.httpPOST(path, "", body);
+            MwResponseVO mrvo = Common.httpPOSTFormUrlEncoded(path, body);
 
             config.getLogger().fine("OAuth2 token response code: " + Integer.toString(mrvo.getStatusCode()));
 

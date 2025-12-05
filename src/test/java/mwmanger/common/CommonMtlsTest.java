@@ -69,8 +69,8 @@ class CommonMtlsTest {
         // Note: This will fail without a real server, but we test the method exists
         int result = Common.updateToken();
 
-        // Then: Method should return error code (no server available)
-        assertThat(result).isEqualTo(-1);
+        // Then: Method should return error code (server returned 401 or connection failed)
+        assertThat(result).isNegative();
     }
 
     @Test
