@@ -752,3 +752,264 @@ Agent 서버                                    CA 서버
 - [ ] 갱신 시 CN 일치 여부 검증
 - [ ] 인증서 발급 이력 로깅
 - [ ] CRL(Certificate Revocation List) 또는 OCSP 지원
+
+---
+
+## 12. Agent 시작 시 인증서 검증 흐름
+
+Agent는 시작 시 인증서 상태를 확인하고 적절한 조치를 취합니다.
+
+### 12.1 시작 흐름도
+
+```
+                            Agent 시작
+                                │
+                                ▼
+                    ┌───────────────────────┐
+                    │ 1. Keystore 파일 존재? │
+                    └───────────┬───────────┘
+                                │
+                ┌───────────────┴───────────────┐
+                │ No                            │ Yes
+                ▼                               ▼
+        ┌───────────────┐           ┌───────────────────────┐
+        │ 최초 등록 필요 │           │ 2. 인증서 유효기간 확인 │
+        └───────┬───────┘           └───────────┬───────────┘
+                │                               │
+                ▼                   ┌───────────┼───────────┬───────────┐
+        ┌───────────────┐           │           │           │           │
+        │ Keypair 생성   │           ▼           ▼           ▼           ▼
+        │ CSR 생성       │        만료됨       임박        유효      파싱 실패
+        │ POST /issue    │      (expired)  (< 7일 남음)  (>= 7일)      │
+        └───────┬───────┘           │           │           │           │
+                │                   │           │           │           ▼
+                ▼                   ▼           ▼           ▼      최초 등록으로
+        ┌───────────────┐   ┌───────────┐ ┌──────────┐ ┌─────────┐
+        │ 승인 대기      │   │ 최초 등록 │ │ 갱신 요청 │ │ 정상    │
+        │ (polling)     │   │ 으로 분기  │ │ POST     │ │ 시작    │
+        └───────┬───────┘   └─────┬─────┘ │ /renew   │ └────┬────┘
+                │                 │       │ (mTLS)   │      │
+                │                 │       └────┬─────┘      │
+                ▼                 ▼            │            │
+        ┌───────────────┐        │             ▼            │
+        │ 승인 완료?     │        │      ┌───────────┐      │
+        └───────┬───────┘        │      │ 새 인증서  │      │
+                │                │      │ 저장       │      │
+         ┌──────┴──────┐         │      └─────┬─────┘      │
+         │ Yes         │ No      │            │            │
+         ▼             ▼         │            ▼            │
+   ┌──────────┐  ┌──────────┐    │      ┌───────────┐      │
+   │ 인증서    │  │ 대기     │    │      │ 정상 시작  │      │
+   │ 저장      │  │ (재시도) │    │      └─────┬─────┘      │
+   └────┬─────┘  └──────────┘    │            │            │
+        │                        │            │            │
+        ▼                        │            │            │
+   ┌──────────┐                  │            │            │
+   │ 정상 시작 │◄─────────────────┴────────────┴────────────┘
+   └──────────┘
+```
+
+### 12.2 인증서 상태 판단 기준
+
+| 상태 | 조건 | 처리 | API |
+|------|------|------|-----|
+| **없음** | Keystore 파일 없음 | 최초 등록 | `POST /api/v1/cert/issue` |
+| **파싱 실패** | 파일 손상/비밀번호 오류 | 최초 등록 | `POST /api/v1/cert/issue` |
+| **만료됨** | `현재시간 > 만료시간` | 최초 등록 (mTLS 불가) | `POST /api/v1/cert/issue` |
+| **임박** | `만료시간 - 현재시간 < 갱신임계값` | 갱신 후 시작 | `POST /api/v1/cert/renew` |
+| **유효** | `만료시간 - 현재시간 >= 갱신임계값` | 정상 시작 | - |
+
+### 12.3 설정 파라미터
+
+```properties
+# agent.properties
+
+# CA Server URL
+ca.server.url=https://ca-server:8443
+
+# 인증서 갱신 임계값 (일)
+# 만료까지 남은 기간이 이 값보다 작으면 갱신 시도
+cert.renewal.threshold.days=7
+
+# 최초 등록 시 승인 대기 polling 간격 (초)
+cert.issue.polling.interval.seconds=30
+
+# 최초 등록 시 최대 대기 시간 (분)
+cert.issue.max.wait.minutes=60
+```
+
+### 12.4 Java 구현 의사코드
+
+```java
+public class CertificateManager {
+
+    public CertificateStatus checkAndRenewCertificate() {
+
+        // 1. Keystore 파일 존재 확인
+        File keystoreFile = new File(config.getClientKeystorePath());
+        if (!keystoreFile.exists()) {
+            return requestNewCertificate();  // 최초 등록
+        }
+
+        // 2. 인증서 로드 및 유효기간 확인
+        X509Certificate cert;
+        try {
+            cert = loadCertificateFromKeystore();
+        } catch (Exception e) {
+            logger.error("Failed to load certificate: " + e.getMessage());
+            return requestNewCertificate();  // 파싱 실패 → 최초 등록
+        }
+
+        // 3. 만료 여부 확인
+        Date now = new Date();
+        Date expiry = cert.getNotAfter();
+        long daysUntilExpiry = TimeUnit.MILLISECONDS.toDays(
+            expiry.getTime() - now.getTime()
+        );
+
+        if (daysUntilExpiry <= 0) {
+            // 만료됨 → mTLS 불가 → 최초 등록
+            logger.warn("Certificate expired. Requesting new certificate.");
+            return requestNewCertificate();
+        }
+
+        if (daysUntilExpiry < config.getCertRenewalThresholdDays()) {
+            // 임박 → mTLS로 갱신
+            logger.info("Certificate expiring in " + daysUntilExpiry + " days. Renewing.");
+            return renewCertificate();
+        }
+
+        // 4. 유효 → 정상 시작
+        logger.info("Certificate valid for " + daysUntilExpiry + " days.");
+        return CertificateStatus.VALID;
+    }
+
+    private CertificateStatus requestNewCertificate() {
+        // 1. 새 Keypair 생성
+        KeyPair keyPair = generateKeyPair();
+
+        // 2. CSR 생성
+        String csr = generateCSR(keyPair, config.getAgentId());
+
+        // 3. CA Server에 요청 (Bootstrap Token 사용)
+        CertResponse response = httpPost(
+            config.getCaServerUrl() + "/api/v1/cert/issue",
+            Map.of(
+                "csr", csr,
+                "bootstrap_token", config.getBootstrapToken()
+            )
+        );
+
+        // 4. 승인 대기
+        if ("pending_approval".equals(response.getStatus())) {
+            return waitForApproval(response.getRequestId(), keyPair);
+        }
+
+        // 5. 즉시 승인된 경우
+        return saveCertificate(keyPair, response.getCertificate());
+    }
+
+    private CertificateStatus renewCertificate() {
+        // 1. 새 Keypair 생성
+        KeyPair keyPair = generateKeyPair();
+
+        // 2. CSR 생성
+        String csr = generateCSR(keyPair, config.getAgentId());
+
+        // 3. CA Server에 요청 (mTLS 인증)
+        CertResponse response = httpPostWithMtls(
+            config.getCaServerUrl() + "/api/v1/cert/renew",
+            Map.of("csr", csr)
+        );
+
+        // 4. 자동 승인되므로 바로 저장
+        return saveCertificate(keyPair, response.getCertificate());
+    }
+
+    private CertificateStatus waitForApproval(String requestId, KeyPair keyPair) {
+        long startTime = System.currentTimeMillis();
+        long maxWaitMs = config.getCertIssueMaxWaitMinutes() * 60 * 1000;
+
+        while (System.currentTimeMillis() - startTime < maxWaitMs) {
+            // 승인 상태 확인
+            CertResponse response = httpGet(
+                config.getCaServerUrl() + "/api/v1/cert/status/" + requestId
+            );
+
+            if ("approved".equals(response.getStatus())) {
+                return saveCertificate(keyPair, response.getCertificate());
+            }
+
+            if ("rejected".equals(response.getStatus())) {
+                logger.error("Certificate request rejected.");
+                return CertificateStatus.REJECTED;
+            }
+
+            // 대기
+            Thread.sleep(config.getCertIssuePollingIntervalSeconds() * 1000);
+        }
+
+        logger.error("Certificate approval timeout.");
+        return CertificateStatus.TIMEOUT;
+    }
+}
+```
+
+### 12.5 상태 전이 다이어그램
+
+```
+                    ┌─────────────────┐
+                    │                 │
+                    ▼                 │ (만료됨)
+┌─────────┐    ┌─────────┐    ┌─────────────┐
+│  없음   │───▶│ 승인대기 │───▶│    유효     │
+└─────────┘    └─────────┘    └─────────────┘
+                    │                 │
+                    │ (거부됨)        │ (임박)
+                    ▼                 ▼
+              ┌─────────┐      ┌─────────────┐
+              │  실패   │      │  갱신 중    │
+              └─────────┘      └──────┬──────┘
+                                      │
+                                      ▼
+                               ┌─────────────┐
+                               │    유효     │
+                               └─────────────┘
+```
+
+### 12.6 에러 처리
+
+| 상황 | 처리 |
+|------|------|
+| CA Server 연결 실패 | 재시도 (exponential backoff) 후 실패 시 종료 |
+| 승인 대기 타임아웃 | 로그 남기고 종료, 관리자 확인 필요 알림 |
+| 승인 거부 | 로그 남기고 종료 |
+| 갱신 실패 (mTLS 오류) | 최초 등록으로 fallback |
+| Keystore 저장 실패 | 로그 남기고 종료 |
+
+### 12.7 로그 메시지 예시
+
+```
+# 정상 시작
+INFO  [CertificateManager] Certificate valid for 45 days. Starting agent.
+
+# 갱신 필요
+INFO  [CertificateManager] Certificate expiring in 5 days. Initiating renewal.
+INFO  [CertificateManager] Generated new keypair (RSA 2048)
+INFO  [CertificateManager] Sending CSR to CA server (mTLS)
+INFO  [CertificateManager] Certificate renewed successfully. Valid until 2025-12-19.
+
+# 최초 등록
+INFO  [CertificateManager] No certificate found. Initiating registration.
+INFO  [CertificateManager] Generated new keypair (RSA 2048)
+INFO  [CertificateManager] Sending CSR to CA server
+INFO  [CertificateManager] Certificate request submitted. Waiting for approval...
+INFO  [CertificateManager] Approval pending. Polling in 30 seconds...
+INFO  [CertificateManager] Certificate approved. Saving to keystore.
+INFO  [CertificateManager] Registration complete. Starting agent.
+
+# 실패
+ERROR [CertificateManager] Certificate request rejected by administrator.
+ERROR [CertificateManager] CA server connection failed: Connection refused
+ERROR [CertificateManager] Approval timeout (60 minutes). Please contact administrator.
+```
