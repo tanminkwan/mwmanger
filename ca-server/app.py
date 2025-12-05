@@ -14,7 +14,7 @@ import secrets
 from datetime import datetime, timedelta, timezone
 from functools import wraps
 
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, Response
 from flask_restx import Api, Resource, fields, Namespace
 from cryptography import x509
 from cryptography.x509.oid import NameOID, ExtendedKeyUsageOID
@@ -594,16 +594,9 @@ class BootstrapTokenDownload(Resource):
             content = token
             mimetype = 'text/plain'
 
-        from io import BytesIO
-        buffer = BytesIO(content.encode())
-        buffer.seek(0)
-
-        return send_file(
-            buffer,
-            mimetype=mimetype,
-            as_attachment=True,
-            download_name='bootstrap.token'
-        )
+        response = Response(content, mimetype=mimetype)
+        response.headers['Content-Disposition'] = 'attachment; filename="bootstrap.token"'
+        return response
 
 @ns_admin.route('/cert/issued')
 class IssuedCertificates(Resource):
