@@ -766,47 +766,66 @@ Agent는 시작 시 인증서 상태를 확인하고 적절한 조치를 취합�
                                 │
                                 ▼
                     ┌───────────────────────┐
-                    │ 1. Keystore 파일 존재? │
+                    │ 1. agent.p12 존재?     │
                     └───────────┬───────────┘
                                 │
                 ┌───────────────┴───────────────┐
                 │ No                            │ Yes
                 ▼                               ▼
-        ┌───────────────┐           ┌───────────────────────┐
-        │ 최초 등록 필요 │           │ 2. 인증서 유효기간 확인 │
-        └───────┬───────┘           └───────────┬───────────┘
-                │                               │
-                ▼                   ┌───────────┼───────────┬───────────┐
-        ┌───────────────┐           │           │           │           │
-        │ Keypair 생성   │           ▼           ▼           ▼           ▼
-        │ CSR 생성       │        만료됨       임박        유효      파싱 실패
-        │ POST /issue    │      (expired)  (< 7일 남음)  (>= 7일)      │
-        └───────┬───────┘           │           │           │           │
-                │                   │           │           │           ▼
-                ▼                   ▼           ▼           ▼      최초 등록으로
-        ┌───────────────┐   ┌───────────┐ ┌──────────┐ ┌─────────┐
-        │ 승인 대기      │   │ 최초 등록 │ │ 갱신 요청 │ │ 정상    │
-        │ (polling)     │   │ 으로 분기  │ │ POST     │ │ 시작    │
-        └───────┬───────┘   └─────┬─────┘ │ /renew   │ └────┬────┘
-                │                 │       │ (mTLS)   │      │
-                │                 │       └────┬─────┘      │
-                ▼                 ▼            │            │
-        ┌───────────────┐        │             ▼            │
-        │ 승인 완료?     │        │      ┌───────────┐      │
-        └───────┬───────┘        │      │ 새 인증서  │      │
-                │                │      │ 저장       │      │
-         ┌──────┴──────┐         │      └─────┬─────┘      │
-         │ Yes         │ No      │            │            │
-         ▼             ▼         │            ▼            │
-   ┌──────────┐  ┌──────────┐    │      ┌───────────┐      │
-   │ 인증서    │  │ 대기     │    │      │ 정상 시작  │      │
-   │ 저장      │  │ (재시도) │    │      └─────┬─────┘      │
-   └────┬─────┘  └──────────┘    │            │            │
-        │                        │            │            │
-        ▼                        │            │            │
-   ┌──────────┐                  │            │            │
-   │ 정상 시작 │◄─────────────────┴────────────┴────────────┘
-   └──────────┘
+        ┌───────────────────┐       ┌───────────────────────┐
+        │ 2. bootstrap.token │       │ 3. 인증서 유효기간 확인 │
+        │    파일 존재?      │       └───────────┬───────────┘
+        └─────────┬─────────┘                   │
+                  │                 ┌───────────┼───────────┬───────────┐
+           ┌──────┴──────┐          │           │           │           │
+           │ No          │ Yes      ▼           ▼           ▼           ▼
+           ▼             ▼       만료됨       임박        유효      파싱 실패
+     ┌──────────┐  ┌───────────┐ (expired)  (< 7일 남음)  (>= 7일)      │
+     │ 에러 종료 │  │ Token 읽기 │    │           │           │           │
+     │          │  └─────┬─────┘    │           │           │           ▼
+     │ "token   │        │          │           │           │      최초 등록으로
+     │  없음"   │        ▼          │           │           │           │
+     └──────────┘  ┌───────────┐    │           │           │           │
+                   │ Keypair   │    │           │           │           │
+                   │ CSR 생성  │◄───┴───────────│───────────│───────────┘
+                   └─────┬─────┘                │           │
+                         │                      │           │
+                         ▼                      ▼           ▼
+                   ┌───────────┐          ┌──────────┐ ┌─────────┐
+                   │ POST      │          │ 갱신 요청 │ │ 정상    │
+                   │ /issue    │          │ POST     │ │ 시작    │
+                   │ (Token)   │          │ /renew   │ └────┬────┘
+                   └─────┬─────┘          │ (mTLS)   │      │
+                         │                └────┬─────┘      │
+                         ▼                     │            │
+                   ┌───────────┐               ▼            │
+                   │ 승인 대기  │         ┌───────────┐      │
+                   │ (polling) │         │ 새 인증서  │      │
+                   └─────┬─────┘         │ 저장       │      │
+                         │               └─────┬─────┘      │
+                         ▼                     │            │
+                   ┌───────────┐               │            │
+                   │ 승인 완료? │               │            │
+                   └─────┬─────┘               │            │
+                         │                     │            │
+                  ┌──────┴──────┐              │            │
+                  │ Yes         │ No           │            │
+                  ▼             ▼              │            │
+            ┌──────────┐  ┌──────────┐         │            │
+            │ 인증서    │  │ 대기     │         │            │
+            │ 저장      │  │ (재시도) │         │            │
+            └────┬─────┘  └──────────┘         │            │
+                 │                             │            │
+                 ▼                             │            │
+            ┌──────────────┐                   │            │
+            │ bootstrap.   │                   │            │
+            │ token 삭제   │                   │            │
+            └──────┬───────┘                   │            │
+                   │                           │            │
+                   ▼                           │            │
+            ┌──────────┐                       │            │
+            │ 정상 시작 │◄──────────────────────┴────────────┘
+            └──────────┘
 ```
 
 ### 12.2 인증서 상태 판단 기준
@@ -819,13 +838,55 @@ Agent는 시작 시 인증서 상태를 확인하고 적절한 조치를 취합�
 | **임박** | `만료시간 - 현재시간 < 갱신임계값` | 갱신 후 시작 | `POST /api/v1/cert/renew` |
 | **유효** | `만료시간 - 현재시간 >= 갱신임계값` | 정상 시작 | - |
 
-### 12.3 설정 파라미터
+### 12.3 인증서 디렉토리 구조
+
+Agent는 인증서 관련 파일을 지정된 디렉토리에서 관리합니다.
+
+```
+{cert_dir}/                      # 기본값: ./certs/
+├── bootstrap.token              # 최초 등록용 토큰 (사용 후 자동 삭제)
+├── agent.p12                    # 클라이언트 인증서 + Private Key (PKCS#12)
+└── truststore.jks               # CA 인증서 (서버 검증용)
+```
+
+**파일별 역할:**
+
+| 파일 | 용도 | 생성 시점 | 삭제 시점 |
+|------|------|----------|----------|
+| `bootstrap.token` | 최초 등록 시 CA Server 인증 | 관리자가 사전 배포 | 인증서 발급 완료 후 자동 삭제 |
+| `agent.p12` | mTLS 클라이언트 인증 | 인증서 발급/갱신 시 | - |
+| `truststore.jks` | CA 인증서 (서버 검증) | 관리자가 사전 배포 | - |
+
+**Bootstrap Token 파일 형식:**
+
+```
+# bootstrap.token (단순 텍스트 파일)
+bt-abc123-xyz789-def456
+```
+
+또는 JSON 형식:
+
+```json
+{
+    "token": "bt-abc123-xyz789-def456",
+    "ca_server_url": "https://ca-server:8443",
+    "expected_cn": "prodserver01_appuser_J"
+}
+```
+
+### 12.4 설정 파라미터
 
 ```properties
 # agent.properties
 
 # CA Server URL
 ca.server.url=https://ca-server:8443
+
+# 인증서 디렉토리 (bootstrap.token, agent.p12, truststore.jks 위치)
+cert.dir=./certs
+
+# Bootstrap Token 파일명
+cert.bootstrap.token.file=bootstrap.token
 
 # 인증서 갱신 임계값 (일)
 # 만료까지 남은 기간이 이 값보다 작으면 갱신 시도
@@ -838,15 +899,25 @@ cert.issue.polling.interval.seconds=30
 cert.issue.max.wait.minutes=60
 ```
 
-### 12.4 Java 구현 의사코드
+### 12.5 Java 구현 의사코드
 
 ```java
 public class CertificateManager {
 
+    private final String certDir;
+    private final String keystorePath;
+    private final String bootstrapTokenPath;
+
+    public CertificateManager(Config config) {
+        this.certDir = config.getCertDir();  // ./certs
+        this.keystorePath = certDir + "/agent.p12";
+        this.bootstrapTokenPath = certDir + "/" + config.getBootstrapTokenFile();
+    }
+
     public CertificateStatus checkAndRenewCertificate() {
 
         // 1. Keystore 파일 존재 확인
-        File keystoreFile = new File(config.getClientKeystorePath());
+        File keystoreFile = new File(keystorePath);
         if (!keystoreFile.exists()) {
             return requestNewCertificate();  // 최초 등록
         }
@@ -885,28 +956,77 @@ public class CertificateManager {
     }
 
     private CertificateStatus requestNewCertificate() {
-        // 1. 새 Keypair 생성
+        // 1. Bootstrap Token 파일 확인
+        File tokenFile = new File(bootstrapTokenPath);
+        if (!tokenFile.exists()) {
+            logger.error("No certificate and no bootstrap token found.");
+            logger.error("Please place bootstrap.token file in: " + certDir);
+            return CertificateStatus.NO_BOOTSTRAP_TOKEN;
+        }
+
+        // 2. Bootstrap Token 읽기
+        String bootstrapToken = readBootstrapToken(tokenFile);
+        if (bootstrapToken == null || bootstrapToken.isEmpty()) {
+            logger.error("Bootstrap token file is empty or invalid.");
+            return CertificateStatus.INVALID_BOOTSTRAP_TOKEN;
+        }
+
+        // 3. 새 Keypair 생성
         KeyPair keyPair = generateKeyPair();
 
-        // 2. CSR 생성
+        // 4. CSR 생성
         String csr = generateCSR(keyPair, config.getAgentId());
 
-        // 3. CA Server에 요청 (Bootstrap Token 사용)
+        // 5. CA Server에 요청 (Bootstrap Token 사용)
         CertResponse response = httpPost(
             config.getCaServerUrl() + "/api/v1/cert/issue",
             Map.of(
                 "csr", csr,
-                "bootstrap_token", config.getBootstrapToken()
+                "bootstrap_token", bootstrapToken
             )
         );
 
-        // 4. 승인 대기
+        // 6. 승인 대기
         if ("pending_approval".equals(response.getStatus())) {
-            return waitForApproval(response.getRequestId(), keyPair);
+            return waitForApproval(response.getRequestId(), keyPair, tokenFile);
         }
 
-        // 5. 즉시 승인된 경우
-        return saveCertificate(keyPair, response.getCertificate());
+        // 7. 즉시 승인된 경우
+        CertificateStatus status = saveCertificate(keyPair, response.getCertificate());
+        if (status == CertificateStatus.VALID) {
+            deleteBootstrapToken(tokenFile);  // 사용 완료 후 삭제
+        }
+        return status;
+    }
+
+    private String readBootstrapToken(File tokenFile) {
+        try {
+            String content = new String(Files.readAllBytes(tokenFile.toPath())).trim();
+
+            // JSON 형식 지원
+            if (content.startsWith("{")) {
+                JSONObject json = new JSONObject(content);
+                return json.getString("token");
+            }
+
+            // 단순 텍스트 형식
+            return content;
+        } catch (Exception e) {
+            logger.error("Failed to read bootstrap token: " + e.getMessage());
+            return null;
+        }
+    }
+
+    private void deleteBootstrapToken(File tokenFile) {
+        try {
+            if (tokenFile.delete()) {
+                logger.info("Bootstrap token file deleted after successful registration.");
+            } else {
+                logger.warn("Failed to delete bootstrap token file. Please delete manually: " + tokenFile.getPath());
+            }
+        } catch (Exception e) {
+            logger.warn("Failed to delete bootstrap token file: " + e.getMessage());
+        }
     }
 
     private CertificateStatus renewCertificate() {
@@ -926,7 +1046,7 @@ public class CertificateManager {
         return saveCertificate(keyPair, response.getCertificate());
     }
 
-    private CertificateStatus waitForApproval(String requestId, KeyPair keyPair) {
+    private CertificateStatus waitForApproval(String requestId, KeyPair keyPair, File tokenFile) {
         long startTime = System.currentTimeMillis();
         long maxWaitMs = config.getCertIssueMaxWaitMinutes() * 60 * 1000;
 
@@ -937,7 +1057,11 @@ public class CertificateManager {
             );
 
             if ("approved".equals(response.getStatus())) {
-                return saveCertificate(keyPair, response.getCertificate());
+                CertificateStatus status = saveCertificate(keyPair, response.getCertificate());
+                if (status == CertificateStatus.VALID) {
+                    deleteBootstrapToken(tokenFile);  // 사용 완료 후 삭제
+                }
+                return status;
             }
 
             if ("rejected".equals(response.getStatus())) {
@@ -955,7 +1079,7 @@ public class CertificateManager {
 }
 ```
 
-### 12.5 상태 전이 다이어그램
+### 12.6 상태 전이 다이어그램
 
 ```
                     ┌─────────────────┐
@@ -977,17 +1101,19 @@ public class CertificateManager {
                                └─────────────┘
 ```
 
-### 12.6 에러 처리
+### 12.7 에러 처리
 
 | 상황 | 처리 |
 |------|------|
 | CA Server 연결 실패 | 재시도 (exponential backoff) 후 실패 시 종료 |
+| Bootstrap Token 없음 | 에러 로그 후 종료 (관리자가 token 파일 배포 필요) |
+| Bootstrap Token 무효 | 에러 로그 후 종료 (CA Server에서 거부) |
 | 승인 대기 타임아웃 | 로그 남기고 종료, 관리자 확인 필요 알림 |
 | 승인 거부 | 로그 남기고 종료 |
 | 갱신 실패 (mTLS 오류) | 최초 등록으로 fallback |
 | Keystore 저장 실패 | 로그 남기고 종료 |
 
-### 12.7 로그 메시지 예시
+### 12.8 로그 메시지 예시
 
 ```
 # 정상 시작
@@ -1001,12 +1127,18 @@ INFO  [CertificateManager] Certificate renewed successfully. Valid until 2025-12
 
 # 최초 등록
 INFO  [CertificateManager] No certificate found. Initiating registration.
+INFO  [CertificateManager] Found bootstrap token file: ./certs/bootstrap.token
 INFO  [CertificateManager] Generated new keypair (RSA 2048)
 INFO  [CertificateManager] Sending CSR to CA server
 INFO  [CertificateManager] Certificate request submitted. Waiting for approval...
 INFO  [CertificateManager] Approval pending. Polling in 30 seconds...
 INFO  [CertificateManager] Certificate approved. Saving to keystore.
+INFO  [CertificateManager] Bootstrap token file deleted after successful registration.
 INFO  [CertificateManager] Registration complete. Starting agent.
+
+# Bootstrap Token 없음
+ERROR [CertificateManager] No certificate and no bootstrap token found.
+ERROR [CertificateManager] Please place bootstrap.token file in: ./certs
 
 # 실패
 ERROR [CertificateManager] Certificate request rejected by administrator.

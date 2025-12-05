@@ -483,7 +483,43 @@ Agent 최초 등록 시 사용할 1회용 토큰을 발급합니다.
 }
 ```
 
-### 4.5 발급된 인증서 목록 조회
+### 4.5 Bootstrap Token 파일 다운로드
+
+관리자가 Agent 배포 시 사용할 Token 파일을 다운로드합니다.
+
+**Endpoint**: `GET /api/v1/admin/bootstrap-token/{token}/download`
+
+**인증 방식**: 관리자 인증
+
+**Query Parameters**:
+
+| 파라미터 | 설명 |
+|---------|------|
+| `format` | `text` (기본값) 또는 `json` |
+
+**Response (format=text)**:
+```
+bt-abc123-xyz789-def456
+```
+
+**Response (format=json)**:
+```json
+{
+    "token": "bt-abc123-xyz789-def456",
+    "ca_server_url": "https://ca-server:8443",
+    "expected_cn": "prodserver01_appuser_J"
+}
+```
+
+**파일명**: `bootstrap.token`
+
+**사용 방법**:
+1. 관리자가 Token 파일 다운로드
+2. Agent 서버의 `{cert_dir}/bootstrap.token`에 배치
+3. Agent 시작 시 자동으로 Token 읽어서 CSR 요청
+4. 인증서 발급 완료 후 Agent가 Token 파일 자동 삭제
+
+### 4.6 발급된 인증서 목록 조회
 
 **Endpoint**: `GET /api/v1/admin/cert/issued`
 
@@ -612,40 +648,67 @@ CREATE TABLE bootstrap_token (
 ### 7.1 Agent 최초 등록
 
 ```
-관리자                          CA Server                         Agent
-─────────                      ─────────                        ─────────
-    │                              │                                │
-    │ 1. Bootstrap Token 발급      │                                │
-    │   POST /admin/bootstrap-token│                                │
-    │──────────────────────────────>                                │
-    │                              │                                │
-    │<──────────────────────────────                                │
-    │   bt-abc123-xyz789           │                                │
-    │                              │                                │
-    │ 2. Token을 Agent 담당자에게 전달                              │
-    │──────────────────────────────────────────────────────────────>│
-    │                              │                                │
-    │                              │  3. Agent 시작                 │
-    │                              │     Keypair 생성               │
-    │                              │     CSR 생성                   │
-    │                              │                                │
-    │                              │<───────────────────────────────│
-    │                              │  4. POST /cert/issue           │
-    │                              │     (CSR + Bootstrap Token)    │
-    │                              │                                │
-    │<─────────────────────────────│                                │
-    │  5. 승인 요청 알림           │                                │
-    │                              │                                │
-    │  6. 검토 후 승인             │                                │
-    │   POST /admin/cert/approve   │                                │
-    │──────────────────────────────>                                │
-    │                              │                                │
-    │                              │───────────────────────────────>│
-    │                              │  7. 인증서 발급                │
-    │                              │     (polling 응답)             │
-    │                              │                                │
-    │                              │                                │ 8. Keystore 저장
-    │                              │                                │    정상 시작
+관리자                          CA Server                         Agent 서버
+─────────                      ─────────                         ───────────
+    │                              │                                  │
+    │ 1. Bootstrap Token 발급      │                                  │
+    │   POST /admin/bootstrap-token│                                  │
+    │──────────────────────────────>                                  │
+    │                              │                                  │
+    │<──────────────────────────────                                  │
+    │   Token: bt-abc123-xyz789    │                                  │
+    │                              │                                  │
+    │ 2. Token 파일 다운로드        │                                  │
+    │   GET /admin/bootstrap-token/│                                  │
+    │       bt-abc123.../download  │                                  │
+    │──────────────────────────────>                                  │
+    │                              │                                  │
+    │<──────────────────────────────                                  │
+    │   bootstrap.token 파일       │                                  │
+    │                              │                                  │
+    │ 3. Token 파일을 Agent 서버에 배포                               │
+    │   (SCP, Ansible, 수동 복사 등)                                  │
+    │─────────────────────────────────────────────────────────────────>│
+    │                              │       ./certs/bootstrap.token    │
+    │                              │                                  │
+    │                              │  4. Agent 시작                   │
+    │                              │     bootstrap.token 발견         │
+    │                              │     Keypair 생성                 │
+    │                              │     CSR 생성                     │
+    │                              │                                  │
+    │                              │<─────────────────────────────────│
+    │                              │  5. POST /cert/issue             │
+    │                              │     (CSR + Bootstrap Token)      │
+    │                              │                                  │
+    │<─────────────────────────────│                                  │
+    │  6. 승인 요청 알림           │                                  │
+    │     (이메일/Slack)           │                                  │
+    │                              │                                  │
+    │  7. 검토 후 승인             │                                  │
+    │   POST /admin/cert/approve   │                                  │
+    │──────────────────────────────>                                  │
+    │                              │                                  │
+    │                              │─────────────────────────────────>│
+    │                              │  8. 인증서 발급                  │
+    │                              │     (polling 응답)               │
+    │                              │                                  │
+    │                              │                                  │ 9. Keystore 저장
+    │                              │                                  │    (agent.p12)
+    │                              │                                  │
+    │                              │                                  │ 10. bootstrap.token
+    │                              │                                  │     자동 삭제
+    │                              │                                  │
+    │                              │                                  │ 11. 정상 시작
+```
+
+**인증서 디렉토리 구조 (Agent 서버)**:
+
+```
+./certs/
+├── bootstrap.token     # (1) 최초: 관리자가 배포
+│                       # (2) 인증서 발급 후 자동 삭제
+├── agent.p12           # 인증서 발급 후 생성
+└── truststore.jks      # CA 인증서 (관리자가 사전 배포)
 ```
 
 ### 7.2 Agent 인증서 갱신
