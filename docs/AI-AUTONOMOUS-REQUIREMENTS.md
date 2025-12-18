@@ -404,7 +404,7 @@ test-server/certs/
 | Phase 6 | 테스트 서버 구현 (Auth, Biz, CA) | - |
 | Phase 7 | mTLS 지원 및 OAuth2 토큰 관리 | 40+ |
 | Phase 8 | 통합 테스트 (가상 서버 연동) | 30+ |
-| Phase 9 | 테스트 보고서 작성 및 최종 Push | - |
+| Phase 9 | 문서화 및 최종 Push | - |
 
 ### 9.5 Phase 6: 테스트 서버 구현 상세
 
@@ -460,50 +460,97 @@ cd ca-server && python app.py &
 ./gradlew test --tests "*IntegrationTest"
 ```
 
-### 9.7 Phase 9: 테스트 보고서 및 완료
+### 9.7 Phase 9: 문서화 및 완료
 
-Phase 9에서 최종 테스트 보고서 작성 후 프로젝트 완료:
+Phase 9에서 모든 문서 작성 후 프로젝트 완료:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
 │  Phase 9 작업 순서:                                          │
 │                                                             │
 │  1. 전체 테스트 실행 (./gradlew test)                        │
-│  2. 테스트 보고서 작성 (docs/TEST_REPORT.md)                 │
-│     - 총 테스트 수                                          │
-│     - Phase별 테스트 현황                                    │
-│     - 통합 테스트 결과                                       │
-│     - 커버리지 요약                                          │
+│  2. 문서 작성 (아래 목록 참조)                                │
 │  3. 최종 커밋 및 Push                                        │
 │  4. main 브랜치 머지 (필요시)                                │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**테스트 보고서 형식 (`docs/TEST_REPORT.md`):**
+#### Phase 9 산출물: 문서 목록
+
+| 문서 | 파일 | 내용 |
+|------|------|------|
+| **README** | `README.md` | 프로젝트 소개, 빠른 시작, 주요 기능 |
+| **아키텍처** | `docs/ARCHITECTURE.md` | 시스템 구조, 컴포넌트 다이어그램, 패키지 구조 |
+| **빌드 가이드** | `docs/BUILD_GUIDE.md` | 빌드 환경, 빌드 명령, JAR 생성 |
+| **배포 가이드** | `docs/DEPLOYMENT_GUIDE.md` | 배포 절차, 설정 파일, 실행 방법 |
+| **테스트 보고서** | `docs/TEST_REPORT.md` | 테스트 현황, 커버리지, 통합 테스트 결과 |
+| **인증 흐름** | `docs/AUTHENTICATION_FLOW.md` | mTLS, OAuth2, 토큰 갱신 흐름 (Mermaid) |
+| **API 문서** | `docs/API_REFERENCE.md` | 테스트 서버 API 엔드포인트 |
+
+#### 각 문서 요구사항
+
+**README.md**
 ```markdown
-# 테스트 보고서
+- 프로젝트 개요 (1-2 문단)
+- 주요 기능 목록
+- 빠른 시작 (Quick Start)
+- 요구사항 (JDK 1.8, etc.)
+- 빌드 및 실행 명령
+- 프로젝트 구조 (tree)
+- 라이선스
+```
 
-## 요약
-- 총 테스트: XXX개
-- 통과: XXX개 (100%)
-- 실패: 0개
+**docs/ARCHITECTURE.md**
+```markdown
+- 시스템 아키텍처 다이어그램 (Mermaid)
+- 컴포넌트 설명 (lifecycle, service, infrastructure)
+- 패키지 구조
+- 의존성 주입(DI) 구조
+- 데이터 흐름
+```
 
-## Phase별 현황
-| Phase | 테스트 수 | 상태 |
-|-------|----------|------|
-| Phase 1 | XX | ✓ |
-| ... | ... | ... |
+**docs/BUILD_GUIDE.md**
+```markdown
+- 빌드 환경 요구사항
+- Gradle 설정 설명
+- 빌드 명령어
+- JAR 파일 생성
+- 테스트 실행 방법
+```
 
-## 통합 테스트 결과
-- mTLS 인증: ✓
-- 토큰 갱신: ✓
-- Biz Service 연동: ✓
-- CA Server 연동: ✓
+**docs/DEPLOYMENT_GUIDE.md**
+```markdown
+- 배포 환경 요구사항
+- agent.properties 설정 항목 설명
+- 인증서 설치 방법 (mTLS)
+- 실행 명령어 (Windows/Linux)
+- 로그 설정
+- 트러블슈팅
+```
 
-## 실행 환경
-- JDK: 1.8
-- Gradle: X.X
-- OS: XXX
+**docs/TEST_REPORT.md**
+```markdown
+- 테스트 요약 (총 테스트 수, 통과율)
+- Phase별 테스트 현황
+- 통합 테스트 결과
+- 커버리지
+- 실행 환경
+```
+
+**docs/AUTHENTICATION_FLOW.md**
+```markdown
+- mTLS 인증 흐름 (Mermaid sequence diagram)
+- OAuth2 토큰 발급 흐름
+- 토큰 갱신 흐름 (cascading)
+- 인증서 발급 흐름 (CA Server)
+```
+
+**docs/API_REFERENCE.md**
+```markdown
+- Mock Auth Server API
+- Biz Service API
+- CA Server API
+- 요청/응답 예시
 ```
 
 ### 9.3 Phase 완료 조건
