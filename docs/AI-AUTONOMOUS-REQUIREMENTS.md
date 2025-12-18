@@ -368,5 +368,31 @@ AI가 판단해야 할 상황에서의 기준:
 
 ---
 
-**문서 버전**: 1.0
+## 11. 실행 방법
+
+### 11.1 사전 준비 (사람이 수행)
+
+```bash
+# 1. 빈 repo 클론
+git clone https://github.com/tanminkwan/mwmanger-auto.git
+cd mwmanger-auto
+
+# 2. 이 문서와 레거시 소스 복사
+cp /path/to/AI-AUTONOMOUS-REQUIREMENTS.md ./
+cp -r /path/to/mwmanger ./mwmanger/
+```
+
+### 11.2 AI 자율 실행
+
+```bash
+claude --dangerously-skip-permissions "AI-AUTONOMOUS-REQUIREMENTS.md 문서를 읽고 요구사항에 따라 자율적으로 수행해."
+```
+
+### 11.3 완료 후
+
+AI가 모든 작업 완료 후 자동으로 commit & push 수행
+
+---
+
+**문서 버전**: 1.1
 **작성일**: 2025-12-18
