@@ -17,7 +17,7 @@
 | 항목 | 값 |
 |------|-----|
 | **GitHub Repository** | `mwmanger-auto` (이미 생성됨) |
-| **레거시 소스 위치** | `./mwmanger/` (repository 내 서브디렉토리) |
+| **레거시 소스 위치** | `./mwmanger/` (로컬 파일 시스템 경로) |
 
 **나머지는 AI가 자율적으로 수행:**
 
