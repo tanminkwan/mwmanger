@@ -125,13 +125,42 @@ Response:
 }
 ```
 
-### 0.6 Git 작업 환경
+### 0.6 Git 브랜치 전략
 
-| 항목 | 값 |
-|------|-----|
-| 작업 브랜치 | `refactoring_major_202511` (신규 생성) |
-| 베이스 브랜치 | `main` |
-| 최종 머지 대상 | `main` |
+각 Phase는 별도의 브랜치에서 작업 후 Push:
+
+| Phase | 브랜치명 | 베이스 |
+|-------|----------|--------|
+| Phase 1 | `phase1-gradle-setup` | `main` |
+| Phase 2 | `phase2-lifecycle` | `phase1-gradle-setup` |
+| Phase 3 | `phase3-service-layer` | `phase2-lifecycle` |
+| Phase 4 | `phase4-security` | `phase3-service-layer` |
+| Phase 5 | `phase5-di-architecture` | `phase4-security` |
+| Phase 6 | `phase6-test-servers` | `phase5-di-architecture` |
+| Phase 7 | `phase7-mtls-oauth2` | `phase6-test-servers` |
+| Phase 8 | `phase8-integration-test` | `phase7-mtls-oauth2` |
+| Phase 9 | `phase9-documentation` | `phase8-integration-test` |
+
+**브랜치 작업 흐름:**
+```bash
+# Phase N 시작
+git checkout phase(N-1)-xxx   # 이전 Phase 브랜치에서
+git checkout -b phaseN-xxx    # 새 브랜치 생성
+
+# Phase N 작업 수행...
+
+# Phase N 완료
+git add .
+git commit -m "Phase N 완료: [내용 요약]"
+git push -u origin phaseN-xxx
+```
+
+**최종 머지 (Phase 9 완료 후):**
+```bash
+git checkout main
+git merge phase9-documentation
+git push origin main
+```
 
 ### 0.7 빌드 명령어
 
@@ -383,12 +412,14 @@ test-server/certs/
 ┌─────────────────────────────────────────────────────────────┐
 │  각 Phase는 반드시 아래 순서를 따른다:                         │
 │                                                             │
-│  1. Coding (기능 구현)                                       │
-│  2. Test Code 작성 (단위 테스트)                              │
-│  3. Test 실행 및 통과 확인 (./gradlew test)                   │
-│  4. Test 결과 보고 (통과한 테스트 수, 커버리지)                 │
-│  5. Git Commit (Phase 완료 커밋)                             │
-│  6. 다음 Phase 진행                                          │
+│  1. 브랜치 생성 (git checkout -b phaseN-xxx)                 │
+│  2. Coding (기능 구현)                                       │
+│  3. Test Code 작성 (단위 테스트)                              │
+│  4. Test 실행 및 통과 확인 (./gradlew test)                   │
+│  5. Test 결과 보고 (통과한 테스트 수, 커버리지)                 │
+│  6. Git Commit (Phase 완료 커밋)                             │
+│  7. 브랜치 Push (git push -u origin phaseN-xxx)              │
+│  8. 다음 Phase 진행                                          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
@@ -559,8 +590,10 @@ Phase 9에서 모든 문서 작성 후 프로젝트 완료:
 
 1. **테스트 100% 통과**: `./gradlew test` 성공
 2. **회귀 버그 없음**: 이전 Phase 테스트도 모두 통과
-3. **커밋 메시지**: `Phase N 완료: [내용 요약]`
-4. **테스트 보고**: 콘솔에 통과한 테스트 수 출력
+3. **브랜치 생성**: `phaseN-xxx` 브랜치에서 작업
+4. **커밋 메시지**: `Phase N 완료: [내용 요약]`
+5. **브랜치 Push**: `git push -u origin phaseN-xxx`
+6. **테스트 보고**: 콘솔에 통과한 테스트 수 출력
 
 ### 9.4 Phase 실패 시
 
