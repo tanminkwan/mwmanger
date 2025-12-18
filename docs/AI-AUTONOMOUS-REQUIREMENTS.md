@@ -24,8 +24,8 @@
 | 항목 | AI 자율 수행 방법 |
 |------|------------------|
 | Git 저장소 | `git init` 후 브랜치 생성 |
-| 빌드 도구 (Maven) | Maven Wrapper 생성 또는 다운로드 |
-| pom.xml | 소스 분석 후 의존성 파악하여 생성 |
+| 빌드 도구 (Gradle) | Gradle Wrapper 생성 (`gradle wrapper`) |
+| build.gradle | 소스 분석 후 의존성 파악하여 생성 |
 | 보안 취약점 위치 | 소스 코드 정적 분석으로 탐지 |
 | 기존 설정 형식 | `Config.java` 분석 |
 | 기존 API 스펙 | `Common.java` 분석 |
@@ -137,11 +137,13 @@ Response:
 
 ```bash
 # 테스트 실행
-HTTP_PROXY=http://70.10.15.10:8080 HTTPS_PROXY=http://70.10.15.10:8080 \
-./tools/apache-maven-3.9.6/bin/mvn test
+./gradlew test
 
-# 오프라인 빌드 (Windows Git Bash)
-/c/Windows/System32/cmd.exe //c "cd /d C:\GitHub\mwmanger && build-offline.bat"
+# 빌드
+./gradlew clean build
+
+# JAR 생성
+./gradlew jar
 ```
 
 ---
@@ -255,16 +257,15 @@ HTTP_PROXY=http://70.10.15.10:8080 HTTPS_PROXY=http://70.10.15.10:8080 \
 
 | 제약 | 사유 |
 |------|------|
-| Gradle 사용 금지 | 프록시/SSL 환경에서 동작하지 않음 |
-| Maven 3.9.6 사용 | `tools/` 디렉토리에 포함된 버전 사용 |
-| 프록시: `http://70.10.15.10:8080` | 빌드 시 환경변수로 설정 필요 |
+| Gradle 사용 | Gradle Wrapper로 빌드 |
+| JDK 1.8 호환 | 레거시 환경 지원 |
 | System.err 출력 금지 | 데몬 프로세스이므로 파일 로그만 사용 |
 
-### 5.2 삭제 금지 파일
+### 5.2 필수 생성 파일
 
-- `pom.xml`
-- `tools/apache-maven-3.9.6/`
-- `build-offline.bat`, `build-offline.sh`
+- `build.gradle` - Gradle 빌드 설정
+- `settings.gradle` - 프로젝트 설정
+- `gradlew`, `gradlew.bat` - Gradle Wrapper
 
 ### 5.3 하위 호환성
 
@@ -327,29 +328,58 @@ HTTP_PROXY=http://70.10.15.10:8080 HTTPS_PROXY=http://70.10.15.10:8080 \
 
 | 기준 | 측정 방법 |
 |------|----------|
-| 테스트 통과 | `mvn test` 실행 시 200개 이상 테스트 100% 통과 |
-| 빌드 성공 | `build-offline.bat` 실행 시 `build/mwmanger.jar` 생성 |
+| 테스트 통과 | `./gradlew test` 실행 시 200개 이상 테스트 100% 통과 |
+| 빌드 성공 | `./gradlew build` 실행 시 JAR 생성 |
 | mTLS 동작 | Mock 서버와 mTLS 통신 성공 |
 | Legacy 동작 | 기존 방식 인증 성공 |
 | 보안 검증 | SecurityValidator 테스트 통과 |
 
 ---
 
-## 9. 작업 순서 (권장)
+## 9. Phase별 작업 순서
+
+### 9.1 Phase 작업 흐름 (모든 Phase 공통)
 
 ```
-1. 생명주기 관리 프레임워크 구현
-2. 서비스 레이어 분리
-3. 보안 검증 모듈 구현
-4. DI 아키텍처 구현
-5. mTLS 지원 추가
-6. 테스트 서버 구현
-7. 통합 테스트 작성
-8. 코드 품질 개선
-9. 문서 작성
+┌─────────────────────────────────────────────────────────────┐
+│  각 Phase는 반드시 아래 순서를 따른다:                         │
+│                                                             │
+│  1. Coding (기능 구현)                                       │
+│  2. Test Code 작성 (단위 테스트)                              │
+│  3. Test 실행 및 통과 확인 (./gradlew test)                   │
+│  4. Test 결과 보고 (통과한 테스트 수, 커버리지)                 │
+│  5. Git Commit (Phase 완료 커밋)                             │
+│  6. 다음 Phase 진행                                          │
+└─────────────────────────────────────────────────────────────┘
 ```
 
-각 단계 완료 시 테스트 실행하여 회귀 버그 확인
+### 9.2 Phase 목록
+
+| Phase | 내용 | 예상 테스트 수 |
+|-------|------|---------------|
+| Phase 1 | 프로젝트 구조 및 Gradle 설정 | 10+ |
+| Phase 2 | 생명주기 관리 프레임워크 | 30+ |
+| Phase 3 | 서비스 레이어 분리 | 40+ |
+| Phase 4 | 보안 검증 모듈 (Command Injection, Path Traversal) | 50+ |
+| Phase 5 | DI 아키텍처 구현 | 30+ |
+| Phase 6 | mTLS 지원 및 OAuth2 토큰 관리 | 40+ |
+
+### 9.3 Phase 완료 조건
+
+각 Phase 완료 시 반드시 확인:
+
+1. **테스트 100% 통과**: `./gradlew test` 성공
+2. **회귀 버그 없음**: 이전 Phase 테스트도 모두 통과
+3. **커밋 메시지**: `Phase N 완료: [내용 요약]`
+4. **테스트 보고**: 콘솔에 통과한 테스트 수 출력
+
+### 9.4 Phase 실패 시
+
+테스트 실패 시:
+1. 실패 원인 분석
+2. 코드 수정
+3. 테스트 재실행
+4. 통과할 때까지 반복 (다음 Phase 진행 금지)
 
 ---
 
