@@ -661,7 +661,7 @@ cp -r /path/to/mwmanger-asis ./mwmanger-asis/
 ```
 
 ### 11.2 AI 자율 실행
-
+- 아래 명령만 사람이 수행
 ```bash
 claude --dangerously-skip-permissions "AI-AUTONOMOUS-REQUIREMENTS.md 문서를 읽고 요구사항에 따라 자율적으로 수행해."
 ```
