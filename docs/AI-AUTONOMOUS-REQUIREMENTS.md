@@ -4,6 +4,124 @@
 
 ---
 
+## 0. 전제 조건 (AI 작업 시작 전 필요 사항)
+
+### 0.1 제공되어야 하는 것
+
+| 항목 | 설명 | 필수 |
+|------|------|------|
+| **레거시 소스코드** | 리팩토링 대상인 기존 mwmanger 소스 전체 | ✓ |
+| **Git 저장소** | 작업할 브랜치가 있는 저장소 | ✓ |
+| **빌드 도구** | `tools/apache-maven-3.9.6/` 디렉토리 | ✓ |
+| **pom.xml** | Maven 빌드 설정 파일 | ✓ |
+
+### 0.2 레거시 소스 구조 (리팩토링 전 상태)
+
+```
+src/main/java/mwmanger/
+├── MwAgent.java              # 메인 진입점
+├── PreWork.java              # 에이전트 등록 로직
+├── FirstWork.java            # Kafka 초기화
+├── MainWork.java             # 명령 폴링 루프
+├── common/
+│   ├── Config.java           # 설정 관리 (싱글톤)
+│   └── Common.java           # HTTP 통신, 토큰 관리
+├── order/
+│   ├── Order.java            # 추상 클래스
+│   ├── ExeShell.java         # 쉘 실행
+│   ├── ExeScript.java        # 스크립트 실행
+│   ├── DownloadFile.java     # 파일 다운로드
+│   └── ReadFullPathFile.java # 파일 읽기
+├── agentfunction/
+│   ├── AgentFunc.java        # 인터페이스
+│   └── AgentFuncFactory.java # 팩토리
+├── kafka/
+│   ├── MwConsumerThread.java
+│   ├── MwProducer.java
+│   └── MwHealthCheckThread.java
+└── vo/
+    ├── CommandVO.java
+    └── ResultVO.java
+```
+
+### 0.3 현재 보안 취약점 위치
+
+| 취약점 | 파일 | 위치 | 현재 코드 패턴 |
+|--------|------|------|---------------|
+| Command Injection | `ExeShell.java` | execute() | `Runtime.exec(command)` 직접 호출 |
+| Command Injection | `ExeScript.java` | execute() | 파라미터 검증 없음 |
+| Path Traversal | `DownloadFile.java` | execute() | `../` 패턴 미검증 |
+| Path Traversal | `ReadFullPathFile.java` | execute() | 경로 검증 없음 |
+| Token Logging | `Common.java` | updateToken() | `logger.fine("token:" + token)` |
+| 동시성 버그 | `MwConsumerThread.java` | run() | `\|\| stopRequested==true` (논리 오류) |
+
+### 0.4 기존 설정 파일 형식 (agent.properties)
+
+```properties
+# 서버 설정
+server_url=https://server.example.com
+get_command_uri=/api/v1/command/getCommands
+post_agent_uri=/api/v1/agent
+
+# 인증
+token=REFRESH_TOKEN_VALUE
+
+# 폴링 주기
+command_check_cycle=60
+
+# Kafka (선택)
+kafka_broker_address=kafka:9092
+
+# 환경 변수
+host_name_var=HOSTNAME
+user_name_var=USER
+
+# 로그
+log_dir=/var/log/mwagent
+log_level=INFO
+```
+
+### 0.5 기존 Legacy 인증 API
+
+```
+POST /api/v1/security/refresh
+Content-Type: application/json
+Authorization: Bearer {refresh_token}
+
+Request Body:
+{
+    "agent_id": "hostname_username_J"
+}
+
+Response:
+{
+    "result_code": "OK",
+    "access_token": "...",
+    "refresh_token": "..."
+}
+```
+
+### 0.6 Git 작업 환경
+
+| 항목 | 값 |
+|------|-----|
+| 작업 브랜치 | `refactoring_major_202511` (신규 생성) |
+| 베이스 브랜치 | `main` |
+| 최종 머지 대상 | `main` |
+
+### 0.7 빌드 명령어
+
+```bash
+# 테스트 실행
+HTTP_PROXY=http://70.10.15.10:8080 HTTPS_PROXY=http://70.10.15.10:8080 \
+./tools/apache-maven-3.9.6/bin/mvn test
+
+# 오프라인 빌드 (Windows Git Bash)
+/c/Windows/System32/cmd.exe //c "cd /d C:\GitHub\mwmanger && build-offline.bat"
+```
+
+---
+
 ## 1. 프로젝트 개요
 
 | 항목 | 내용 |
