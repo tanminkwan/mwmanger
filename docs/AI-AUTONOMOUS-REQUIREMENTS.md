@@ -452,6 +452,7 @@ test-server/certs/
 
 | Phase | 내용 | 예상 테스트 수 |
 |-------|------|---------------|
+| Phase 0 | 레거시 소스 초기 커밋 (main) | - |
 | Phase 1 | 프로젝트 구조 및 Gradle 설정 | 10+ |
 | Phase 2 | 생명주기 관리 프레임워크 | 30+ |
 | Phase 3 | 서비스 레이어 분리 | 40+ |
@@ -462,7 +463,7 @@ test-server/certs/
 | Phase 8 | 통합 테스트 (가상 서버 연동) | 30+ |
 | Phase 9 | 문서화 및 최종 Push | - |
 
-### 9.5 Phase 6: 테스트 서버 구현 상세
+### 9.3 Phase 6: 테스트 서버 구현 상세
 
 Phase 6에서는 Python Flask로 3개의 가상 서버를 구현:
 
@@ -479,7 +480,7 @@ Phase 6에서는 Python Flask로 3개의 가상 서버를 구현:
 └─────────────────────────────────────────────────────────────┘
 ```
 
-### 9.6 Phase 8: 통합 테스트 상세
+### 9.4 Phase 8: 통합 테스트 상세
 
 Phase 8에서는 가상 서버를 활용한 통합 테스트 작성:
 
@@ -516,7 +517,7 @@ cd ca-server && python app.py &
 ./gradlew test --tests "*IntegrationTest"
 ```
 
-### 9.7 Phase 9: 문서화 및 완료
+### 9.5 Phase 9: 문서화 및 완료
 
 Phase 9에서 모든 문서 작성 후 프로젝트 완료:
 
@@ -609,7 +610,7 @@ Phase 9에서 모든 문서 작성 후 프로젝트 완료:
 - 요청/응답 예시
 ```
 
-### 9.3 Phase 완료 조건
+### 9.6 Phase 완료 조건
 
 각 Phase 완료 시 반드시 확인:
 
@@ -620,7 +621,7 @@ Phase 9에서 모든 문서 작성 후 프로젝트 완료:
 5. **브랜치 Push**: `git push -u origin phaseN-xxx`
 6. **테스트 보고**: 콘솔에 통과한 테스트 수 출력
 
-### 9.4 Phase 실패 시
+### 9.7 Phase 실패 시
 
 테스트 실패 시:
 1. 실패 원인 분석
@@ -656,7 +657,7 @@ cd mwmanger-auto
 
 # 2. 이 문서와 레거시 소스 복사
 cp /path/to/AI-AUTONOMOUS-REQUIREMENTS.md ./
-cp -r /path/to/mwmanger ./mwmanger/
+cp -r /path/to/mwmanger-asis ./mwmanger-asis/
 ```
 
 ### 11.2 AI 자율 실행
