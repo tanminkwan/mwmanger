@@ -127,10 +127,35 @@ Response:
 
 ### 0.6 Git 브랜치 전략
 
+#### 초기 설정 (Phase 0)
+
+Phase 시작 전, 레거시 소스를 main 브랜치에 커밋:
+
+```bash
+# 1. 빈 repo 클론
+git clone https://github.com/tanminkwan/mwmanger-auto.git
+cd mwmanger-auto
+
+# 2. 레거시 소스 복사 (mwmanger-asis/ → src/main/java/mwmanger/)
+mkdir -p src/main/java
+cp -r ./mwmanger-asis src/main/java/mwmanger
+
+# 3. 요구사항 문서 복사
+cp /path/to/AI-AUTONOMOUS-REQUIREMENTS.md ./
+
+# 4. 초기 커밋
+git add .
+git commit -m "Phase 0: Add legacy source code (as-is)"
+git push origin main
+```
+
+#### Phase별 브랜치
+
 각 Phase는 별도의 브랜치에서 작업 후 Push:
 
 | Phase | 브랜치명 | 베이스 |
 |-------|----------|--------|
+| Phase 0 | `main` | - (레거시 소스 초기 커밋) |
 | Phase 1 | `phase1-gradle-setup` | `main` |
 | Phase 2 | `phase2-lifecycle` | `phase1-gradle-setup` |
 | Phase 3 | `phase3-service-layer` | `phase2-lifecycle` |
