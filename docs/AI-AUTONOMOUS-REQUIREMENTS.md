@@ -306,13 +306,52 @@ Response:
 | 통합 테스트 | mTLS 인증 흐름, 토큰 갱신 흐름 |
 | 보안 테스트 | 취약점 방어 검증 |
 
-### 7.3 테스트 서버 (Python)
+### 7.3 테스트 서버 (Python Flask)
 
-| 서버 | 용도 |
-|------|------|
-| Mock Auth Server | OAuth2 토큰 발급, mTLS 검증 |
-| Biz Service | JWT 토큰 검증 예제 |
-| CA Server | 인증서 발급/갱신 시뮬레이션 |
+AI가 직접 구현해야 하는 가상 서버:
+
+| 서버 | 디렉토리 | 포트 | 용도 |
+|------|----------|------|------|
+| Mock Auth Server | `test-server/` | 8443 (HTTPS/mTLS) | OAuth2 토큰 발급, mTLS 클라이언트 인증서 검증 |
+| Biz Service | `biz-service/` | 8080 (HTTP) | JWT Access Token 검증, 비즈니스 API 예제 |
+| CA Server | `ca-server/` | 8444 (HTTPS) | 인증서 발급/갱신/폐기 시뮬레이션 |
+
+#### 테스트 서버 요구사항
+
+**Mock Auth Server (`test-server/mock_server.py`)**
+```
+- POST /oauth2/token: client_credentials grant로 Access Token 발급
+- POST /oauth2/token: refresh_token grant로 토큰 갱신
+- mTLS 클라이언트 인증서 검증 (CN 추출)
+- JWT 토큰 생성 (HS256)
+```
+
+**Biz Service (`biz-service/app.py`)**
+```
+- GET /api/v1/command/getCommands: JWT 검증 후 명령 목록 반환
+- POST /api/v1/agent: 에이전트 등록
+- POST /api/v1/security/refresh: Legacy 토큰 갱신 (하위 호환)
+- Authorization: Bearer {token} 헤더 검증
+```
+
+**CA Server (`ca-server/app.py`)**
+```
+- POST /api/v1/certificate/issue: 신규 인증서 발급
+- POST /api/v1/certificate/renew: 인증서 갱신
+- GET /api/v1/certificate/status: 인증서 상태 조회
+- Bootstrap Token 검증
+```
+
+#### 테스트 인증서 생성
+
+`test-server/generate-certs.sh` 스크립트로 생성:
+```
+test-server/certs/
+├── ca.crt, ca.key           # Root CA
+├── server.crt, server.key   # Mock Auth Server용
+├── client.crt, client.key   # 에이전트 클라이언트용
+└── client.p12               # PKCS12 형식 (Java용)
+```
 
 ### 7.4 문서
 
@@ -362,7 +401,63 @@ Response:
 | Phase 3 | 서비스 레이어 분리 | 40+ |
 | Phase 4 | 보안 검증 모듈 (Command Injection, Path Traversal) | 50+ |
 | Phase 5 | DI 아키텍처 구현 | 30+ |
-| Phase 6 | mTLS 지원 및 OAuth2 토큰 관리 | 40+ |
+| Phase 6 | 테스트 서버 구현 (Auth, Biz, CA) | - |
+| Phase 7 | mTLS 지원 및 OAuth2 토큰 관리 | 40+ |
+| Phase 8 | 통합 테스트 (가상 서버 연동) | 30+ |
+
+### 9.5 Phase 6: 테스트 서버 구현 상세
+
+Phase 6에서는 Python Flask로 3개의 가상 서버를 구현:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 6 작업 순서:                                          │
+│                                                             │
+│  1. test-server/generate-certs.sh 작성 (인증서 생성)         │
+│  2. Mock Auth Server 구현 (test-server/mock_server.py)      │
+│  3. Biz Service 구현 (biz-service/app.py)                   │
+│  4. CA Server 구현 (ca-server/app.py)                       │
+│  5. 각 서버 수동 실행 테스트                                  │
+│  6. Git Commit                                              │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 9.6 Phase 8: 통합 테스트 상세
+
+Phase 8에서는 가상 서버를 활용한 통합 테스트 작성:
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│  Phase 8 통합 테스트 시나리오:                                │
+│                                                             │
+│  1. mTLS 인증 흐름 테스트                                    │
+│     - 클라이언트 인증서로 Auth Server 접속                    │
+│     - Access Token 발급 확인                                 │
+│                                                             │
+│  2. 토큰 갱신 흐름 테스트                                     │
+│     - Refresh Token으로 토큰 갱신                            │
+│     - 만료 시 mTLS fallback 확인                             │
+│                                                             │
+│  3. Biz Service 연동 테스트                                  │
+│     - JWT 토큰으로 API 호출                                  │
+│     - 명령 조회/결과 전송 확인                                │
+│                                                             │
+│  4. CA Server 연동 테스트                                    │
+│     - Bootstrap Token으로 인증서 발급                        │
+│     - 인증서 갱신 흐름 확인                                   │
+└─────────────────────────────────────────────────────────────┘
+```
+
+**통합 테스트 실행 방법:**
+```bash
+# 1. 테스트 서버 시작 (별도 터미널)
+cd test-server && python mock_server.py --ssl &
+cd biz-service && python app.py &
+cd ca-server && python app.py &
+
+# 2. 통합 테스트 실행
+./gradlew test --tests "*IntegrationTest"
+```
 
 ### 9.3 Phase 완료 조건
 
