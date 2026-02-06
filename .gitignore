@@ -13,6 +13,7 @@
 # Package Files #
 *.jar
 !lib/*.jar
+!release/mwmanger-0.9.10.jar
 *.war
 *.nar
 *.ear
