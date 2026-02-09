@@ -42,7 +42,7 @@ public class CommandProcessingLoop {
 
 		    	// Access Token Expired
 	    		if(rcv.getReturnCode()==0){
-
+	    			getConfig().getLogger().info("Access token expired (401). Attempting to update token...");
 	    			Common.updateToken();
 
 	    		}else if(rcv.getReturnCode()>0){

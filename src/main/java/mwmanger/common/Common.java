@@ -179,6 +179,10 @@ public class Common {
             
             mrvo.setStatusCode(response.getStatusLine().getStatusCode());
             
+            if (mrvo.getStatusCode() == 401) {
+                config.getLogger().warning("Authentication failed (401) for URL: " + url);
+            }
+
             if (entity != null) {
             	
             	String value = EntityUtils.toString(entity);
@@ -230,6 +234,10 @@ public class Common {
 
             mrvo.setStatusCode(response.getStatusLine().getStatusCode());
 
+            if (mrvo.getStatusCode() == 401) {
+                config.getLogger().warning("Authentication failed (401) for URL: " + url);
+            }
+
             if (entity != null) {
 
             	String value = EntityUtils.toString(entity);
@@ -278,6 +286,10 @@ public class Common {
             
             mrvo.setStatusCode(response.getStatusLine().getStatusCode());
             
+            if (mrvo.getStatusCode() == 401) {
+                config.getLogger().warning("Authentication failed (401) for URL: " + url);
+            }
+
             if (entity != null) {
             	
             	String value = EntityUtils.toString(entity);

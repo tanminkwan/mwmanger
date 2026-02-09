@@ -5,7 +5,7 @@ package mwmanger.common;
  * Update VERSION constant when releasing new version.
  */
 public final class Version {
-    public static final String VERSION = "0000.0009.0010";
+    public static final String VERSION = "0000.0009.0011";
 
     private Version() {}
 }

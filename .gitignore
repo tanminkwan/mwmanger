@@ -3,6 +3,8 @@
 
 # Log file
 *.log
+*.lck
+nohup.out
 
 # BlueJ files
 *.ctxt
@@ -13,7 +15,7 @@
 # Package Files #
 *.jar
 !lib/*.jar
-!release/mwmanger-0.9.10.jar
+!release/mwmanger-*.jar
 *.war
 *.nar
 *.ear
