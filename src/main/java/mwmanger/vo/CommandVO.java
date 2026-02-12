@@ -9,6 +9,7 @@ public class CommandVO {
 	private String targetFilePath = null;
 	private String resultHash = null;
 	private String additionalParams = null;
+	private org.json.simple.JSONObject additionalParamsJson = null;
 	private String resultReceiver = null;
 	private String targetObject = null;
 	
@@ -53,6 +54,12 @@ public class CommandVO {
 	}
 	public void setAdditionalParams(String additionalParams) {
 		this.additionalParams = additionalParams;
+	}
+	public org.json.simple.JSONObject getAdditionalParamsJson() {
+		return additionalParamsJson;
+	}
+	public void setAdditionalParamsJson(org.json.simple.JSONObject additionalParamsJson) {
+		this.additionalParamsJson = additionalParamsJson;
 	}
 	public String getResultReceiver() {
 		return resultReceiver;

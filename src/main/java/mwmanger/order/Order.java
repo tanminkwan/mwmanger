@@ -63,7 +63,19 @@ public abstract class Order {
 		commandVo.setTargetFilePath(replaceParam(tmp_target_file_path));
 		commandVo.setResultHash((String) command.get("result_hash"));
 		String tmp_additional_params = (String) command.get("additional_params");
-		commandVo.setAdditionalParams(replaceParam(tmp_additional_params));
+		String additionalParams = replaceParam(tmp_additional_params);
+		commandVo.setAdditionalParams(additionalParams);
+		
+		if (additionalParams != null && additionalParams.trim().startsWith("{") && additionalParams.trim().endsWith("}")) {
+			try {
+				org.json.simple.parser.JSONParser parser = new org.json.simple.parser.JSONParser();
+				org.json.simple.JSONObject json = (org.json.simple.JSONObject) parser.parse(additionalParams);
+				commandVo.setAdditionalParamsJson(json);
+			} catch (org.json.simple.parser.ParseException e) {
+				getConfig().getLogger().warning("Failed to parse additionalParams as JSON: " + additionalParams);
+			}
+		}
+
 		commandVo.setResultReceiver((String) command.get("result_receiver"));
 		commandVo.setTargetObject((String) command.get("target_object"));
 		commandVo.setHostName(getConfig().getHostName());

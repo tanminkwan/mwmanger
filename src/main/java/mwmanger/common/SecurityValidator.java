@@ -22,6 +22,7 @@ public class SecurityValidator {
     /**
      * Validates command parameters to prevent command injection.
      * Checks for dangerous shell metacharacters.
+     * If the parameter is in JSON format, validates each value within the JSON.
      *
      * @param param The parameter to validate
      * @return true if the parameter is safe, false otherwise
@@ -30,6 +31,31 @@ public class SecurityValidator {
         if (param == null || param.isEmpty()) {
             return true;
         }
+
+        String trimmed = param.trim();
+        // If it looks like JSON, parse and check each value
+        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+            try {
+                org.json.simple.parser.JSONParser parser = new org.json.simple.parser.JSONParser();
+                org.json.simple.JSONObject json = (org.json.simple.JSONObject) parser.parse(trimmed);
+                for (Object key : json.keySet()) {
+                    Object value = json.get(key);
+                    if (value instanceof String) {
+                        if (!isValidCommandParam((String) value)) {
+                            return false;
+                        }
+                    } else if (value instanceof org.json.simple.JSONObject || value instanceof org.json.simple.JSONArray) {
+                        if (!isValidCommandParam(value.toString())) {
+                            return false;
+                        }
+                    }
+                }
+                return true;
+            } catch (org.json.simple.parser.ParseException e) {
+                // If parsing fails, fall back to normal check against DANGEROUS_CHARS
+            }
+        }
+
         return !DANGEROUS_CHARS.matcher(param).find();
     }
 

@@ -3,6 +3,8 @@ package mwmanger.order;
 import static mwmanger.common.Config.getConfig;
 
 import java.io.File;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.logging.Level;
 
 import org.json.simple.JSONObject;
@@ -42,13 +44,32 @@ public class DownloadFile extends Order {
 		String baseDir = System.getProperty("user.dir");
 		String targetFilePath = commandVo.getTargetFilePath();
 
+		boolean isAbsolutePath = false;
+		if (commandVo.getAdditionalParamsJson() != null) {
+			Object obj = commandVo.getAdditionalParamsJson().get("is_absolute_path");
+			if (obj instanceof Boolean) {
+				isAbsolutePath = (Boolean) obj;
+			} else if (obj instanceof String) {
+				isAbsolutePath = Boolean.parseBoolean((String) obj);
+			}
+		}
+
 		// Security validation: check path traversal (configurable, default ON)
 		String targetFileName = commandVo.getTargetFileName();
 		if (getConfig().isSecurityPathTraversalCheck()) {
-			if (!SecurityValidator.isValidPath(baseDir, targetFilePath)) {
-				getConfig().getLogger().severe("Security: Path traversal detected in targetFilePath: " + targetFilePath);
-				rv.setResult("Error:SecurityException - Invalid path");
-				return rv;
+			if (isAbsolutePath) {
+				// For absolute path, check for path traversal patterns
+				if (targetFilePath.contains("..")) {
+					getConfig().getLogger().severe("Security: Path traversal detected in absolute targetFilePath: " + targetFilePath);
+					rv.setResult("Error:SecurityException - Invalid absolute path");
+					return rv;
+				}
+			} else {
+				if (!SecurityValidator.isValidPath(baseDir, targetFilePath)) {
+					getConfig().getLogger().severe("Security: Path traversal detected in targetFilePath: " + targetFilePath);
+					rv.setResult("Error:SecurityException - Invalid path");
+					return rv;
+				}
 			}
 
 			// Security validation: check filename
@@ -60,12 +81,11 @@ public class DownloadFile extends Order {
 		}
 
 		String file_location;
-		if (getConfig().isSecurityPathTraversalCheck()) {
+		if (isAbsolutePath) {
+			file_location = targetFilePath;
+		} else if (getConfig().isSecurityPathTraversalCheck()) {
 			try {
 				file_location = SecurityValidator.getValidatedPath(baseDir, targetFilePath);
-				if (!file_location.endsWith(File.separator)) {
-					file_location += File.separator;
-				}
 			} catch (SecurityException e) {
 				getConfig().getLogger().severe("Security: " + e.getMessage());
 				rv.setResult("Error:SecurityException - " + e.getMessage());
@@ -73,12 +93,27 @@ public class DownloadFile extends Order {
 			}
 		} else {
 			file_location = baseDir + File.separator + targetFilePath;
-			if (!file_location.endsWith(File.separator)) {
-				file_location += File.separator;
+		}
+
+		if (!file_location.endsWith(File.separator)) {
+			file_location += File.separator;
+		}
+
+		// Check if file exists and rename if necessary before downloading
+		File existingFile = new File(file_location + targetFileName);
+		if (existingFile.exists()) {
+			SimpleDateFormat sdf = new SimpleDateFormat("yyMMdd.HHmmss");
+			String timestamp = sdf.format(new Date());
+			String newFileName = file_location + targetFileName + "_" + timestamp;
+			File destFile = new File(newFileName);
+			if (existingFile.renameTo(destFile)) {
+				getConfig().getLogger().info("Existing file renamed to: " + newFileName);
+			} else {
+				getConfig().getLogger().warning("Failed to rename existing file: " + targetFileName);
 			}
 		}
 
-        String url = getConfig().getServer_url()
+		String url = getConfig().getServer_url()
         		+ "/api/v1/agent/download/" + getConfig().getAgent_type()
         		+ "/" + targetFileName;
 
