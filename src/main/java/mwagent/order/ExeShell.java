@@ -102,6 +102,13 @@ public class ExeShell extends Order {
 		rv.setTargetFilePath(currentPath);
 
     	String command_t = currentPath + targetFileName;
+		
+		// Add target existence check and logging
+		getConfig().getLogger().info("Target verification - currentPath: [" + currentPath + "], targetFileName: [" + targetFileName + "]");
+		File targetFileCheck = new File(currentPath, targetFileName);
+		getConfig().getLogger().info("Target file absolute path: [" + targetFileCheck.getAbsolutePath() + "]");
+		getConfig().getLogger().info("Target file exists: [" + targetFileCheck.exists() + "], isFile: [" + targetFileCheck.isFile() + "], canExecute: [" + targetFileCheck.canExecute() + "]");
+		
     	String command_s = "";
 
     	if (getConfig().getOs().equals("WIN")){
@@ -141,6 +148,10 @@ public class ExeShell extends Order {
     	for(String s : command){
     		getConfig().getLogger().fine("commandline: "+s);
     	}
+
+		StringBuilder cmdLog = new StringBuilder("Executing shell command: ");
+		for (String s : command) cmdLog.append("[").append(s).append("] ");
+		getConfig().getLogger().info(cmdLog.toString());
 
     	try {
 

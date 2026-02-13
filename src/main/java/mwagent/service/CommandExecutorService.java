@@ -132,7 +132,7 @@ public class CommandExecutorService implements AgentLifecycle {
         try {
             OrderCallerThread thread = new OrderCallerThread("mwagent.order." + commandClass, command);
             executorService.submit(thread);
-            logger.fine("Submitted command: " + commandClass);
+            logger.info("Submitted command: " + commandClass + " with data: " + command.toJSONString());
 
         } catch (Exception e) {
             logger.log(Level.SEVERE, "Failed to submit command: " + commandClass, e);

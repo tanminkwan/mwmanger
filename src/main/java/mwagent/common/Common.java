@@ -192,6 +192,7 @@ public class Common {
                 
                 try {
                 	jsonObj = (JSONObject) jsonPar.parse(value);
+                    config.getLogger().info("HTTP POST response from " + url + ": " + value);
                 }catch(ParseException e){
                 	config.getLogger().warning("JSON Parsing Error  data : "+value);
                 } 
@@ -247,6 +248,7 @@ public class Common {
 
                 try {
                 	jsonObj = (JSONObject) jsonPar.parse(value);
+                    config.getLogger().info("HTTP POST Form response from " + url + ": " + value);
                 }catch(ParseException e){
                 	config.getLogger().warning("JSON Parsing Error  data : "+value);
                 }
@@ -299,6 +301,7 @@ public class Common {
                 
                 try {
                 	jsonObj = (JSONObject) jsonPar.parse(value);
+                    config.getLogger().info("HTTP GET response from " + url + ": " + value);
                 }catch(ParseException e){
                 	config.getLogger().warning("JSON Parsing Error  data : "+value);
                 } 

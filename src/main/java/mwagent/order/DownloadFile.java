@@ -261,28 +261,34 @@ public class DownloadFile extends Order {
 						getConfig().getLogger().info("Windows detected: Auto-replacing " + originalFilename + " with " + exeFilename);
 					}
 
-					getConfig().getLogger().info("Triggering execution of: " + exeFilename);
-					
+					String exeFullPath = file_location + exeFilename;
+					getConfig().getLogger().info("Triggering detached execution of: " + exeFullPath);
+				
 					try {
-						JSONObject exeCmdJson = new JSONObject();
-						exeCmdJson.put("command_id", commandVo.getCommandId());
-						exeCmdJson.put("repetition_seq", commandVo.getRepetitionSeq());
-						exeCmdJson.put("target_file_path", targetFilePath); 
-						exeCmdJson.put("target_file_name", exeFilename);
-						exeCmdJson.put("additional_params", exeParams);
-						exeCmdJson.put("host_name", commandVo.getHostName());
-						exeCmdJson.put("result_receiver", commandVo.getResultReceiver());
-						exeCmdJson.put("target_object", commandVo.getTargetObject());
-						
-						ExeShell exeShell = new ExeShell(exeCmdJson);
-						int exeRtn = exeShell.execute();
-						
-						if (exeRtn == 1) {
-							ResultVO exeRv = exeShell.getResultVo();
-							rv.setResult(rv.getResult() + " | Execution [" + exeFilename + "] result: " + exeRv.getResult());
+						ProcessBuilder pb;
+						if (getConfig().getOs().equals("WIN")) {
+							// Windows: use "cmd /c start" to detach
+							if (exeParams != null && !exeParams.isEmpty()) {
+								pb = new ProcessBuilder("cmd", "/c", "start", "", exeFullPath, exeParams);
+							} else {
+								pb = new ProcessBuilder("cmd", "/c", "start", "", exeFullPath);
+							}
 						} else {
-							rv.setResult(rv.getResult() + " | Execution [" + exeFilename + "] failed with code: " + exeRtn);
+							// Linux/Unix: use "nohup bash" with setsid to fully detach from parent
+							String cmdLine = exeFullPath;
+							if (exeParams != null && !exeParams.isEmpty()) {
+								cmdLine += " " + exeParams;
+							}
+							pb = new ProcessBuilder("bash", "-c", cmdLine);
+							pb.redirectErrorStream(true);
+							pb.redirectOutput(ProcessBuilder.Redirect.appendTo(
+								new File(file_location + "exe_script.log")));
 						}
+						pb.directory(new File(file_location));
+						Process proc = pb.start();
+						
+						getConfig().getLogger().info("Detached process started for: " + exeFullPath + " (PID may not be trackable)");
+						rv.setResult(rv.getResult() + " | Execution [" + exeFilename + "] launched as detached process");
 					} catch (Exception e) {
 						getConfig().getLogger().log(Level.WARNING, "Error during post-download execution", e);
 						rv.setResult(rv.getResult() + " | Execution error: " + e.getMessage());
