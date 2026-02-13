@@ -1,6 +1,6 @@
-package mwmanger.lifecycle;
+package mwagent.lifecycle;
 
-import mwmanger.common.Config;
+import mwagent.common.Config;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

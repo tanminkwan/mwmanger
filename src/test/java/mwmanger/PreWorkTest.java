@@ -1,4 +1,4 @@
-package mwmanger;
+package mwagent;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.Mockito.*;
@@ -10,9 +10,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import mwmanger.service.registration.BootstrapService;
-import mwmanger.vo.AgentStatus;
-import mwmanger.vo.RawCommandsVO;
+import mwagent.service.registration.BootstrapService;
+import mwagent.vo.AgentStatus;
+import mwagent.vo.RawCommandsVO;
 
 /**
  * PreWork 테스트

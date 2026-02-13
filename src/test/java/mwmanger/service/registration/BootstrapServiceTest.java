@@ -1,4 +1,4 @@
-package mwmanger.service.registration;
+package mwagent.service.registration;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -11,10 +11,10 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import mwmanger.vo.AgentStatus;
-import mwmanger.vo.RawCommandsVO;
-import mwmanger.vo.RegistrationRequest;
-import mwmanger.vo.RegistrationResponse;
+import mwagent.vo.AgentStatus;
+import mwagent.vo.RawCommandsVO;
+import mwagent.vo.RegistrationRequest;
+import mwagent.vo.RegistrationResponse;
 
 /**
  * BootstrapService 테스트

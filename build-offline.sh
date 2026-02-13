@@ -4,8 +4,8 @@
 
 set -e
 
-PROJECT_NAME="mwmanger"
-MAIN_CLASS="mwmanger.MwAgent"
+PROJECT_NAME="mwagent"
+MAIN_CLASS="mwagent.MwAgent"
 
 echo "========================================="
 echo "  MwManger Offline Build"

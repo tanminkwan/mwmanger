@@ -1,7 +1,7 @@
-package mwmanger;
+package mwagent;
 
-import mwmanger.service.registration.BootstrapService;
-import mwmanger.vo.RawCommandsVO;
+import mwagent.service.registration.BootstrapService;
+import mwagent.vo.RawCommandsVO;
 import org.json.simple.JSONArray;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

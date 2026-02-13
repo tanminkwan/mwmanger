@@ -1,6 +1,6 @@
-package mwmanger.order;
+package mwagent.order;
 
-import static mwmanger.common.Config.getConfig;
+import static mwagent.common.Config.getConfig;
 import static org.assertj.core.api.Assertions.*;
 
 import java.util.logging.Logger;
@@ -9,7 +9,7 @@ import org.json.simple.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import mwmanger.vo.ResultVO;
+import mwagent.vo.ResultVO;
 
 /**
  * ExeShell 테스트

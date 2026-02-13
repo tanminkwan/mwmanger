@@ -1,4 +1,4 @@
-package mwmanger.vo;
+package mwagent.vo;
 
 import static org.assertj.core.api.Assertions.*;
 

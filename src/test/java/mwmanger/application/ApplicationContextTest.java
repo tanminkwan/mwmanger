@@ -1,4 +1,4 @@
-package mwmanger.application;
+package mwagent.application;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -7,9 +7,9 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import mwmanger.infrastructure.config.ConfigurationProvider;
-import mwmanger.infrastructure.config.MockConfigurationProvider;
-import mwmanger.infrastructure.http.HttpClient;
+import mwagent.infrastructure.config.ConfigurationProvider;
+import mwagent.infrastructure.config.MockConfigurationProvider;
+import mwagent.infrastructure.http.HttpClient;
 
 /**
  * Tests for ApplicationContext (DI Container).

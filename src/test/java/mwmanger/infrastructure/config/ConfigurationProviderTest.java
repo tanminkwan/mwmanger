@@ -1,4 +1,4 @@
-package mwmanger.infrastructure.config;
+package mwagent.infrastructure.config;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -6,7 +6,7 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
-import mwmanger.common.Config;
+import mwagent.common.Config;
 
 /**
  * Tests for ConfigurationProvider interface implementation.

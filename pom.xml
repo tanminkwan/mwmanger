@@ -6,11 +6,11 @@
     <modelVersion>4.0.0</modelVersion>
 
     <groupId>com.leebalso</groupId>
-    <artifactId>mwmanger</artifactId>
+    <artifactId>mwagent</artifactId>
     <version>1.0</version>
     <packaging>jar</packaging>
 
-    <name>MwManger Agent</name>
+    <name>MwAgent</name>
     <description>Leebalso Agent - Remote Management Agent for Distributed Servers</description>
 
     <properties>
@@ -148,10 +148,10 @@
                 <artifactId>maven-jar-plugin</artifactId>
                 <version>3.2.0</version>
                 <configuration>
-                    <finalName>mwmanger</finalName>
+                    <finalName>mwagent</finalName>
                     <archive>
                         <manifest>
-                            <mainClass>mwmanger.MwAgent</mainClass>
+                            <mainClass>mwagent.MwAgent</mainClass>
                         </manifest>
                     </archive>
                 </configuration>

@@ -1,6 +1,6 @@
-package mwmanger.order;
+package mwagent.order;
 
-import mwmanger.vo.CommandVO;
+import mwagent.vo.CommandVO;
 import org.json.simple.JSONObject;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

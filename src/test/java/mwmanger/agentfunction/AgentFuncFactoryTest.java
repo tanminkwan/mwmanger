@@ -1,4 +1,4 @@
-package mwmanger.agentfunction;
+package mwagent.agentfunction;
 
 import org.junit.jupiter.api.Test;
 

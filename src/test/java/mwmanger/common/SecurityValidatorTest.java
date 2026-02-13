@@ -1,4 +1,4 @@
-package mwmanger.common;
+package mwagent.common;
 
 import static org.assertj.core.api.Assertions.*;
 

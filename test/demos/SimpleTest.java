@@ -1,6 +1,6 @@
-import mwmanger.vo.CommandVO;
-import mwmanger.vo.ResultVO;
-import mwmanger.common.Common;
+import mwagent.vo.CommandVO;
+import mwagent.vo.ResultVO;
+import mwagent.common.Common;
 
 /**
  * 간단한 수동 테스트 실행기

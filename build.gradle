@@ -48,7 +48,7 @@ dependencies {
 }
 
 application {
-    mainClass = 'mwmanger.MwAgent'
+    mainClass = 'mwagent.MwAgent'
 }
 
 // Source directory configuration (Gradle standard: src/main/java)
@@ -59,7 +59,7 @@ application {
 tasks.withType(Jar) {
     manifest {
         attributes(
-            'Main-Class': 'mwmanger.MwAgent',
+            'Main-Class': 'mwagent.MwAgent',
             'Implementation-Version': project.version
         )
     }

@@ -1,5 +1,5 @@
-import mwmanger.vo.CommandVO;
-import mwmanger.vo.ResultVO;
+import mwagent.vo.CommandVO;
+import mwagent.vo.ResultVO;
 
 /**
  * 초간단 테스트 (의존성 없음)

@@ -1,7 +1,7 @@
-package mwmanger.integration;
+package mwagent.integration;
 
-import mwmanger.common.Common;
-import mwmanger.common.Config;
+import mwagent.common.Common;
+import mwagent.common.Config;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.DisplayName;

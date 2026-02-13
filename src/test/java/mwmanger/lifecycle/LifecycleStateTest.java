@@ -1,4 +1,4 @@
-package mwmanger.lifecycle;
+package mwagent.lifecycle;
 
 import static org.assertj.core.api.Assertions.*;
 

@@ -1,4 +1,4 @@
-package mwmanger.infrastructure.config;
+package mwagent.infrastructure.config;
 
 import java.util.HashMap;
 import java.util.Map;

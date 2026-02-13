@@ -1,4 +1,4 @@
-package mwmanger.service.registration;
+package mwagent.service.registration;
 
 import static org.assertj.core.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.*;
@@ -11,9 +11,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import mwmanger.vo.MwResponseVO;
-import mwmanger.vo.RegistrationRequest;
-import mwmanger.vo.RegistrationResponse;
+import mwagent.vo.MwResponseVO;
+import mwagent.vo.RegistrationRequest;
+import mwagent.vo.RegistrationResponse;
 
 /**
  * RegistrationService 단위 테스트

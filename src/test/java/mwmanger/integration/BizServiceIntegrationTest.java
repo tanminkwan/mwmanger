@@ -1,8 +1,8 @@
-package mwmanger.integration;
+package mwagent.integration;
 
-import mwmanger.common.Common;
-import mwmanger.common.Config;
-import mwmanger.vo.MwResponseVO;
+import mwagent.common.Common;
+import mwagent.common.Config;
+import mwagent.vo.MwResponseVO;
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
 import org.junit.jupiter.api.*;

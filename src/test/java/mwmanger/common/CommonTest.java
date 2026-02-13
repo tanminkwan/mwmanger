@@ -1,7 +1,7 @@
-package mwmanger.common;
+package mwagent.common;
 
-import mwmanger.vo.CommandVO;
-import mwmanger.vo.ResultVO;
+import mwagent.vo.CommandVO;
+import mwagent.vo.ResultVO;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;

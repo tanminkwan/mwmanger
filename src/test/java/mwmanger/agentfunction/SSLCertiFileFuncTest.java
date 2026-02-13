@@ -1,8 +1,8 @@
-package mwmanger.agentfunction;
+package mwagent.agentfunction;
 
-import mwmanger.common.Config;
-import mwmanger.vo.CommandVO;
-import mwmanger.vo.ResultVO;
+import mwagent.common.Config;
+import mwagent.vo.CommandVO;
+import mwagent.vo.ResultVO;
 import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 import org.junit.jupiter.api.*;

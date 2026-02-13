@@ -1,4 +1,4 @@
-package mwmanger.infrastructure.http;
+package mwagent.infrastructure.http;
 
 import static org.junit.jupiter.api.Assertions.*;
 

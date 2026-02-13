@@ -1,4 +1,4 @@
-package mwmanger.service;
+package mwagent.service;
 
 import static org.assertj.core.api.Assertions.*;
 
@@ -9,7 +9,7 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import mwmanger.lifecycle.LifecycleState;
+import mwagent.lifecycle.LifecycleState;
 
 /**
  * CommandExecutorService 테스트
