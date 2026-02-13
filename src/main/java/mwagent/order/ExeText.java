@@ -14,6 +14,16 @@ import java.util.UUID;
 import org.json.simple.JSONObject;
 import mwagent.vo.ResultVO;
 
+/**
+ * Executes a script provided as a raw text string.
+ * It creates a temporary script file, executes it, and then deletes it.
+ * 
+ * Supported additional_params (String):
+ * - The actual content of the script (e.g., shell script or batch file).
+ * 
+ * Example additional_params:
+ * "#!/bin/bash\necho 'hello world'\nls -l"
+ */
 public class ExeText extends Order {
     public ExeText(JSONObject command) {
         super(command);

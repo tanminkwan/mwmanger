@@ -26,6 +26,15 @@ import mwagent.vo.CommandVO;
 import mwagent.vo.ResultVO;
 import static mwagent.common.Config.getConfig;
 
+/**
+ * Checks and retrieves SSL certificate information for a domain.
+ * 
+ * Supported additional_params (String):
+ * - Domain name or domain:port. Defaults to port 443.
+ * 
+ * Example additional_params:
+ * "google.com" or "example.com:8443"
+ */
 public class SSLCertiFunc implements AgentFunc {
 
 	@Override

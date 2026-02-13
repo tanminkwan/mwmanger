@@ -17,6 +17,15 @@ import mwagent.vo.CommandVO;
 import mwagent.vo.ResultVO;
 import static mwagent.common.Config.getConfig;
 
+/**
+ * Retrieves SSL certificate information from a local PEM or DER file.
+ * 
+ * Supported additional_params (String):
+ * - Full path to the certificate file (.pem or other).
+ * 
+ * Example additional_params:
+ * "/etc/ssl/certs/server.pem"
+ */
 public class SSLCertiFileFunc  implements AgentFunc {
 
 	@Override

@@ -24,6 +24,23 @@ import mwagent.common.SecurityValidator;
 import mwagent.vo.CommandVO;
 import mwagent.vo.ResultVO;
 
+/**
+ * Downloads a file from a URL and optionally extracts it if it's a zip.
+ * 
+ * Supported additional_params (JSON):
+ * - url: (String) The source URL to download from.
+ * - target_directory: (String, optional) Local directory to save the file. Defaults to ".".
+ * - backup_if_exists: (Boolean, optional) Whether to backup existing file. Defaults to true.
+ * - extract: (Boolean, optional) Whether to extract if it's a zip. Defaults to true.
+ * 
+ * Example additional_params JSON:
+ * {
+ *   "url": "http://example.com/file.zip",
+ *   "target_directory": "/tmp/downloads",
+ *   "backup_if_exists": true,
+ *   "extract": true
+ * }
+ */
 public class DownloadNUnzipFunc implements AgentFunc {
 
 	private String downloadUrl = "";

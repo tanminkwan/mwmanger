@@ -13,6 +13,15 @@ import mwagent.common.SecurityValidator;
 import mwagent.vo.ResultVO;
 
 
+/**
+ * Executes a shell command or script.
+ * 
+ * Supported additional_params (String):
+ * - Space-separated arguments to be passed to the command or script.
+ * 
+ * Example additional_params:
+ * "-al /home/user"
+ */
 public class ExeShell extends Order {
 
 	public ExeShell(JSONObject command) {

@@ -23,6 +23,27 @@ import static mwagent.common.Config.getConfig;
 import mwagent.vo.CommandVO;
 import mwagent.vo.ResultVO;
 
+/**
+ * Collects JMX statistics from a JEUS server.
+ * 
+ * Note: This function unexpectedly uses 'target_file_path' to pass a JSON string of parameters.
+ * 
+ * Expected JSON Fields (passed via target_file_path):
+ * - jmx_url: (String) JMX provider URL (e.g., "service:jmx:rmi:///jndi/jeus://host:port/ManagementServer").
+ * - jmx_username: (String) JMX login username.
+ * - jmx_password: (String) JMX login password.
+ * - jmx_target: (String) JEUS target name.
+ * - jmx_domain: (String) JEUS domain name.
+ * 
+ * Example JSON string:
+ * {
+ *   "jmx_url": "jeus://127.0.0.1:9736",
+ *   "jmx_username": "administrator",
+ *   "jmx_password": "password",
+ *   "jmx_target": "adminServer",
+ *   "jmx_domain": "jeus_domain"
+ * }
+ */
 public class JmxStatFunc implements AgentFunc {
 
     @Override

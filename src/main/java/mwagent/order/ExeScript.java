@@ -14,6 +14,15 @@ import org.json.simple.JSONObject;
 import mwagent.common.SecurityValidator;
 import mwagent.vo.ResultVO;
 
+/**
+ * Executes a local script file.
+ * 
+ * Supported additional_params (String):
+ * - Space-separated arguments to be passed to the script.
+ * 
+ * Example additional_params:
+ * "arg1 arg2 --verbose"
+ */
 public class ExeScript extends Order {
 
 	public ExeScript(JSONObject command) {

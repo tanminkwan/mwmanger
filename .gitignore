@@ -14,6 +14,7 @@ nohup.out
 
 # Package Files #
 *.jar
+/mwagent.jar
 !lib/*.jar
 !release/mwmanger-*.jar
 !release/mwagent-*.jar

@@ -2,6 +2,15 @@ package mwagent.order;
 
 import org.json.simple.JSONObject;
 
+/**
+ * Reads a file within the target path, appending an extension from additional_params.
+ * 
+ * Supported additional_params (String):
+ * - File extension (without the dot).
+ * 
+ * Example:
+ * If target_file_name="test" and additional_params="txt", reads "test.txt".
+ */
 public class ReadPlainFile extends ReadFile {
 
 	public ReadPlainFile(JSONObject command) {

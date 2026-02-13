@@ -8,6 +8,15 @@ import java.util.logging.Level;
 import org.json.simple.JSONObject;
 import mwagent.common.SecurityValidator;
 
+/**
+ * Reads a file using an absolute path provided in additional_params.
+ * 
+ * Supported additional_params (String):
+ * - The full absolute path to the file.
+ * 
+ * Example additional_params:
+ * "/var/log/syslog" or "C:\\logs\\app.log"
+ */
 public class ReadFullPathFile extends ReadFile {
 
 	// Allowed base directories for reading files

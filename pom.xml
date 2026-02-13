@@ -7,10 +7,10 @@
 
     <groupId>com.leebalso</groupId>
     <artifactId>mwmanger</artifactId>
-    <version>1.0</version>
+    <version>0.9.16</version>
     <packaging>jar</packaging>
 
-    <name>MwManger Agent</name>
+    <name>MwAgent</name>
     <description>Leebalso Agent - Remote Management Agent for Distributed Servers</description>
 
     <properties>
