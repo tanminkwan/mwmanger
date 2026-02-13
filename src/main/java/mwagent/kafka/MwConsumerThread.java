@@ -71,7 +71,7 @@ public class MwConsumerThread extends Thread {
     				JSONObject command_ =  (JSONObject) new JSONParser().parse(message);
  	    		   	String command_class  = (String)command_.get("command_class");
  	    		    
- 	    		    OrderCallerThread thread = new OrderCallerThread("mwmanger.oder."+command_class, command_);
+ 	    		    OrderCallerThread thread = new OrderCallerThread("mwagent.order."+command_class, command_);
 
  	    		    thread.setDaemon(true);
  	    		    thread.start();	    		   

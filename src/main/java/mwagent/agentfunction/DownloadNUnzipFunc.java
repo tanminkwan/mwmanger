@@ -20,6 +20,7 @@ import static mwagent.common.Config.getConfig;
 
 
 import mwagent.common.Common;
+import mwagent.common.SecurityValidator;
 import mwagent.vo.CommandVO;
 import mwagent.vo.ResultVO;
 
@@ -28,6 +29,7 @@ public class DownloadNUnzipFunc implements AgentFunc {
 	private String downloadUrl = "";
 	private String targetDirectory = ".";
 	private Boolean backupIfExists = true;
+	private Boolean extract = true;
 	
 	@Override
 	public ArrayList<ResultVO> exeCommand(CommandVO command) {
@@ -49,17 +51,27 @@ public class DownloadNUnzipFunc implements AgentFunc {
             rv.setResult("params parsing error");
             return Common.makeOneResultArray(rv, command);
         }
+
+		// Security validation for target directory
+		String baseDir = System.getProperty("user.dir");
+		if (getConfig().isSecurityPathTraversalCheck()) {
+			if (!SecurityValidator.isValidPath(baseDir, targetDirectory)) {
+				getConfig().getLogger().severe("Security: Path traversal detected in target_directory: " + targetDirectory);
+				rv.setResult("Error:SecurityException - Invalid path");
+				return Common.makeOneResultArray(rv, command);
+			}
+		}
 		
         try {
         	
         	File savedFile = downloadFile(downloadUrl, targetDirectory, backupIfExists);
         	getConfig().getLogger().info("[INFO] Downloaded file: " + savedFile.getAbsolutePath());
 			
-			if (savedFile.getName().toLowerCase().endsWith(".zip")) {
+			if (extract && savedFile.getName().toLowerCase().endsWith(".zip")) {
                 unzipFile(savedFile, new File(targetDirectory)); 
                 getConfig().getLogger().info("[INFO] Unzip completed.");
             } else {
-            	getConfig().getLogger().info("[INFO] Download completed (not a zip).");
+            	getConfig().getLogger().info("[INFO] Download completed (extract skipped or not a zip).");
             }
 			
         } catch (IOException e) {
@@ -82,6 +94,9 @@ public class DownloadNUnzipFunc implements AgentFunc {
             }
             if(jsonObj.containsKey("backup_if_exists")){
             	setBackupIfExists((Boolean) jsonObj.get("backup_if_exists"));
+            }
+            if(jsonObj.containsKey("extract")){
+            	setExtract((Boolean) jsonObj.get("extract"));
             }
 
         } catch (Exception e) {
@@ -248,6 +263,10 @@ public class DownloadNUnzipFunc implements AgentFunc {
 
 	private void setBackupIfExists(Boolean backupIfExists) {
 		this.backupIfExists = backupIfExists;
+	}
+
+	private void setExtract(Boolean extract) {
+		this.extract = extract;
 	}
 
 }

@@ -7,4 +7,4 @@ export WORK_DIR=`pwd`
 export WEBTOBDIR=/home/hennry
 
 ps -ef | grep mwagent.$USER | grep -v grep | awk '{print $2}' | xargs kill -9
-nohup $JAVA_HOME/bin/java -cp $WORK_DIR/lib/*:$WORK_DIR/release/mwagent-0.9.14.jar -Dname=mwagent.$USER -Xms128m -Xmx128m mwagent.MwAgent > nohup.out 2>&1 &
+nohup $JAVA_HOME/bin/java -cp $WORK_DIR/lib/*:$WORK_DIR/release/mwagent-0.9.15.jar -Dname=mwagent.$USER -Xms128m -Xmx128m mwagent.MwAgent > nohup.out 2>&1 &

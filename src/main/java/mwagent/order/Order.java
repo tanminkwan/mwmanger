@@ -57,20 +57,41 @@ public abstract class Order {
 
 	protected void convertCommand(JSONObject command) {
 
-		commandVo.setCommandId((String) command.get("command_id"));
-		commandVo.setRepetitionSeq((Long) command.get("repetition_seq"));
+		Object cmdIdObj = command.get("command_id");
+		commandVo.setCommandId(cmdIdObj != null ? cmdIdObj.toString() : "");
+
+		Object seqObj = command.get("repetition_seq");
+		if (seqObj instanceof Long) {
+			commandVo.setRepetitionSeq((Long) seqObj);
+		} else if (seqObj instanceof String) {
+			try {
+				commandVo.setRepetitionSeq(Long.parseLong((String) seqObj));
+			} catch (NumberFormatException e) {
+				commandVo.setRepetitionSeq(0L);
+			}
+		} else {
+			commandVo.setRepetitionSeq(0L);
+		}
+
 		String tmp_target_file_name = (String) command.get("target_file_name");
 		commandVo.setTargetFileName(replaceParam(tmp_target_file_name));
+
 		String tmp_target_file_path = (String) command.get("target_file_path");
 		commandVo.setTargetFilePath(replaceParam(tmp_target_file_path));
+
 		commandVo.setResultHash((String) command.get("result_hash"));
-		String tmp_additional_params = (String) command.get("additional_params");
+
+		Object addParamObj = command.get("additional_params");
+		String tmp_additional_params = addParamObj != null ? addParamObj.toString() : null;
 		String additionalParams = replaceParam(tmp_additional_params);
 		commandVo.setAdditionalParams(additionalParams);
-		
 
-		commandVo.setResultReceiver((String) command.get("result_receiver"));
-		commandVo.setTargetObject((String) command.get("target_object"));
+		Object receiverObj = command.get("result_receiver");
+		commandVo.setResultReceiver(receiverObj != null ? receiverObj.toString() : SERVER);
+
+		Object targetObj = command.get("target_object");
+		commandVo.setTargetObject(targetObj != null ? targetObj.toString() : "");
+
 		commandVo.setHostName(getConfig().getHostName());
 
 	}

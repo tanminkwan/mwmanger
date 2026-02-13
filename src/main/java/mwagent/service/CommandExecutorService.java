@@ -130,7 +130,7 @@ public class CommandExecutorService implements AgentLifecycle {
         }
 
         try {
-            OrderCallerThread thread = new OrderCallerThread("mwmanger.order." + commandClass, command);
+            OrderCallerThread thread = new OrderCallerThread("mwagent.order." + commandClass, command);
             executorService.submit(thread);
             logger.fine("Submitted command: " + commandClass);
 

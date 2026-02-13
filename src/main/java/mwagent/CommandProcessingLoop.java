@@ -58,7 +58,7 @@ public class CommandProcessingLoop {
 		    	        	continue;
 		    	        }
 
-		    	        OrderCallerThread thread = new OrderCallerThread("mwmanger.order."+command_class, command_);
+		    	        OrderCallerThread thread = new OrderCallerThread("mwagent.order."+command_class, command_);
 		    	        executorService.submit(thread);
 		    	    }
 

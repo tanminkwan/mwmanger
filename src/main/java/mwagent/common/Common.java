@@ -331,7 +331,9 @@ public class Common {
 
         	HttpGet request = new HttpGet(uri);
             request.addHeader(HttpHeaders.CONTENT_TYPE, "application/json");
-			request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer "+token);
+			if (token != null && !token.isEmpty()) {
+				request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer "+token);
+			}
 
 			HttpResponse response = httpClient.execute(request);
             HttpEntity entity = response.getEntity();
@@ -343,8 +345,26 @@ public class Common {
             
             if (returnCode >= 200 && returnCode < 300 && entity != null) {            	
             	
-				String name = response.getFirstHeader("Content-Disposition").getValue();
-				String filename = name.replaceFirst("(?i)^.*filename=\"?([^\"]+)\"?.*$", "$1");
+				String filename = "downloaded_file";
+				org.apache.http.Header contentDisposition = response.getFirstHeader("Content-Disposition");
+				if (contentDisposition != null) {
+					String name = contentDisposition.getValue();
+					filename = name.replaceFirst("(?i)^.*filename=\"?([^\"]+)\"?.*$", "$1");
+				} else {
+					// Extract from URL if possible
+					try {
+						String path = new java.net.URI(uri).getPath();
+						if (path != null && path.contains("/")) {
+							String lastPart = path.substring(path.lastIndexOf('/') + 1);
+							if (!lastPart.isEmpty()) {
+								filename = lastPart;
+							}
+						}
+					} catch (Exception e) {
+						// Fallback to default
+					}
+				}
+
 				fullname = file_location + filename;
 				FileOutputStream fos = new FileOutputStream(fullname);
 				entity.writeTo(fos);
