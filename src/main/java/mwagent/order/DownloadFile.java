@@ -211,10 +211,12 @@ public class DownloadFile extends Order {
 		}else{
 
 			String fileName = mwrv.getFileName();
+			if (fileName == null || fileName.isEmpty()) {
+				fileName = commandVo.getTargetFileName(); // Fallback to original name
+			}
 
-	        if(fileName.equals("")){
-
-	        	rv.setResult("No response Error");
+	        if(fileName == null || fileName.equals("")){
+	        	rv.setResult("No response Error (Filename is empty)");
 
 	        }else{
 
@@ -227,6 +229,8 @@ public class DownloadFile extends Order {
 				if (chmod != null && !getConfig().getOs().equals("WIN")) {
 					applyChmod(file_location + fileName, chmod);
 				}
+
+				getConfig().getLogger().info("Download check - fileName: " + fileName + ", extract: " + extract + ", OS: " + getConfig().getOs());
 
 				if (extract && fileName.toLowerCase().endsWith(".zip")) {
 					try {
@@ -300,7 +304,9 @@ public class DownloadFile extends Order {
 		try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipFile))) {
 			ZipEntry entry;
 			while ((entry = zis.getNextEntry()) != null) {
-				File outFile = new File(destDir, entry.getName());
+				// Normalize path for Windows compatibility
+				String entryName = entry.getName().replace('/', File.separatorChar);
+				File outFile = new File(destDir, entryName);
 				if (entry.isDirectory()) {
 					if (!outFile.exists()) {
 						outFile.mkdirs();

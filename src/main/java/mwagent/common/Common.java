@@ -350,6 +350,7 @@ public class Common {
 				if (contentDisposition != null) {
 					String name = contentDisposition.getValue();
 					filename = name.replaceFirst("(?i)^.*filename=\"?([^\"]+)\"?.*$", "$1");
+					config.getLogger().info("Filename from Content-Disposition: " + filename);
 				} else {
 					// Extract from URL if possible
 					try {
@@ -363,6 +364,7 @@ public class Common {
 					} catch (Exception e) {
 						// Fallback to default
 					}
+					config.getLogger().info("Filename from URL/Fallback: " + filename);
 				}
 
 				fullname = file_location + filename;
