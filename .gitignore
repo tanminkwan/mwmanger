@@ -16,6 +16,7 @@ nohup.out
 *.jar
 !lib/*.jar
 !release/mwmanger-*.jar
+!release/mwagent-*.jar
 *.war
 *.nar
 *.ear
