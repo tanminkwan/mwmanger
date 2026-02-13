@@ -80,18 +80,24 @@ public class SecurityValidator {
      * @return true if the path is safe (within base directory), false otherwise
      */
     public static boolean isValidPath(String basePath, String userPath) {
-        if (userPath == null || userPath.isEmpty()) {
+        // Treat null as invalid, but empty as current directory
+        if (userPath == null) {
             return false;
         }
 
+        String normalizedUserPath = userPath.replace("\\", File.separator).replace("/", File.separator);
+        if (normalizedUserPath.isEmpty()) {
+            normalizedUserPath = ".";
+        }
+
         // Check for obvious path traversal patterns
-        if (PATH_TRAVERSAL.matcher(userPath).find()) {
+        if (PATH_TRAVERSAL.matcher(userPath).find() || PATH_TRAVERSAL.matcher(normalizedUserPath).find()) {
             return false;
         }
 
         try {
             File baseDir = new File(basePath).getCanonicalFile();
-            File targetFile = new File(basePath, userPath).getCanonicalFile();
+            File targetFile = new File(basePath, normalizedUserPath).getCanonicalFile();
 
             // Ensure the target is within the base directory
             return targetFile.getPath().startsWith(baseDir.getPath());
@@ -143,11 +149,15 @@ public class SecurityValidator {
      */
     public static String getValidatedPath(String basePath, String userPath) throws SecurityException {
         if (!isValidPath(basePath, userPath)) {
-            throw new SecurityException("Path traversal detected: " + userPath);
+            throw new SecurityException("Path traversal detected or invalid path: " + userPath);
         }
 
         try {
-            return new File(basePath, userPath).getCanonicalPath();
+            String normalizedUserPath = userPath == null ? "" : userPath.replace("\\", File.separator).replace("/", File.separator);
+            if (normalizedUserPath.isEmpty()) {
+                normalizedUserPath = ".";
+            }
+            return new File(basePath, normalizedUserPath).getCanonicalPath();
         } catch (IOException e) {
             throw new SecurityException("Invalid path: " + userPath, e);
         }

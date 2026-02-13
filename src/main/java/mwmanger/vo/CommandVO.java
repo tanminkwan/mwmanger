@@ -1,5 +1,8 @@
 package mwmanger.vo;
 
+import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
+
 public class CommandVO {
 
 	private String commandId = "";
@@ -9,7 +12,7 @@ public class CommandVO {
 	private String targetFilePath = null;
 	private String resultHash = null;
 	private String additionalParams = null;
-	private org.json.simple.JSONObject additionalParamsJson = null;
+	private JSONObject additionalParamsJson = null;
 	private String resultReceiver = null;
 	private String targetObject = null;
 	
@@ -56,9 +59,20 @@ public class CommandVO {
 		this.additionalParams = additionalParams;
 	}
 	public org.json.simple.JSONObject getAdditionalParamsJson() {
+		if (additionalParamsJson == null && additionalParams != null && !additionalParams.isEmpty()) {
+			try {
+				JSONParser parser = new JSONParser();
+				Object obj = parser.parse(additionalParams);
+				if (obj instanceof JSONObject) {
+					additionalParamsJson = (JSONObject) obj;
+				}
+			} catch (Exception e) {
+				// Not a valid JSON or other error, leave it null
+			}
+		}
 		return additionalParamsJson;
 	}
-	public void setAdditionalParamsJson(org.json.simple.JSONObject additionalParamsJson) {
+	public void setAdditionalParamsJson(JSONObject additionalParamsJson) {
 		this.additionalParamsJson = additionalParamsJson;
 	}
 	public String getResultReceiver() {

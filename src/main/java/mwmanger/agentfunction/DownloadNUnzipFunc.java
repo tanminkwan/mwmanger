@@ -3,7 +3,6 @@ package mwmanger.agentfunction;
 import java.util.ArrayList;
 
 import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.FileOutputStream;
@@ -33,14 +32,18 @@ public class DownloadNUnzipFunc implements AgentFunc {
 	@Override
 	public ArrayList<ResultVO> exeCommand(CommandVO command) {
 
-		String params = command.getAdditionalParams();
-
-		getConfig().getLogger().info("AdditionalParams : " + params);
+		getConfig().getLogger().info("AdditionalParams : " + command.getAdditionalParams());
 
 		ResultVO rv = new ResultVO();
 		rv.setOk(false);
 
-		int rtn = setParams(params);
+		JSONObject paramsJson = command.getAdditionalParamsJson();
+		if (paramsJson == null) {
+			rv.setResult("params parsing error: JSON is null or invalid");
+			return Common.makeOneResultArray(rv, command);
+		}
+
+		int rtn = setParams(paramsJson);
 		
 		if(rtn < 0){
             rv.setResult("params parsing error");
@@ -70,13 +73,9 @@ public class DownloadNUnzipFunc implements AgentFunc {
 		
 	}
 	
-	private int setParams(String params){
+	private int setParams(JSONObject jsonObj){
 		
         try {
-
-        	JSONParser jsonPar = new JSONParser();
-            JSONObject jsonObj = (JSONObject) jsonPar.parse(params);
-
             setDownloadUrl((String) jsonObj.get("url"));
             if(jsonObj.containsKey("target_directory")){
             	setTargetDirectory((String) jsonObj.get("target_directory"));

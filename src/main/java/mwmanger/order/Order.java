@@ -7,6 +7,8 @@ import java.nio.charset.Charset;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.json.simple.JSONObject;
 
@@ -66,15 +68,6 @@ public abstract class Order {
 		String additionalParams = replaceParam(tmp_additional_params);
 		commandVo.setAdditionalParams(additionalParams);
 		
-		if (additionalParams != null && additionalParams.trim().startsWith("{") && additionalParams.trim().endsWith("}")) {
-			try {
-				org.json.simple.parser.JSONParser parser = new org.json.simple.parser.JSONParser();
-				org.json.simple.JSONObject json = (org.json.simple.JSONObject) parser.parse(additionalParams);
-				commandVo.setAdditionalParamsJson(json);
-			} catch (org.json.simple.parser.ParseException e) {
-				getConfig().getLogger().warning("Failed to parse additionalParams as JSON: " + additionalParams);
-			}
-		}
 
 		commandVo.setResultReceiver((String) command.get("result_receiver"));
 		commandVo.setTargetObject((String) command.get("target_object"));
@@ -83,25 +76,36 @@ public abstract class Order {
 	}
 
 	protected String replaceParam(String text) {
-
-		if (text == null || text.isEmpty() || text.length() < 1)
+		if (text == null || text.isEmpty()) {
 			return text;
+		}
 
-		int s = text.indexOf("<<");
-		int e = text.indexOf(">>");
+		// Support both <<keyword>> and {{keyword}}
+		Pattern pattern = Pattern.compile("<<(.*?)>>|\\{\\{(.*?)\\}\\}");
+		Matcher matcher = pattern.matcher(text);
+		StringBuffer sb = new StringBuffer();
+		boolean found = false;
 
-		if (s == -1 || e == -1 || s > e){
-			return text;
-		}			
+		while (matcher.find()) {
+			found = true;
+			String key = (matcher.group(1) != null) ? matcher.group(1) : matcher.group(2);
+			String val = getConfig().getEnv().get(key);
+			
+			if (val == null) {
+				val = ""; 
+			}
+			
+			getConfig().getLogger().fine("Param in order :" + key + " => " + val);
+			matcher.appendReplacement(sb, Matcher.quoteReplacement(val));
+		}
+		matcher.appendTail(sb);
 
-		String env_val = text.substring(s + 2, e);
-		String rtn_val = getConfig().getEnv().get(env_val);
-		
-		getConfig().getLogger().fine("Param in order :" + env_val + "=>" + rtn_val);
-		
-		String ctext = text.substring(0, s) + rtn_val + text.substring(e + 2);
-		return  replaceParam(ctext);
+		if (found) {
+			// Recursive call to handle nested placeholders or values containing placeholders
+			return replaceParam(sb.toString());
+		}
 
+		return sb.toString();
 	}
 
 	protected String getHash(String content) throws NoSuchAlgorithmException {

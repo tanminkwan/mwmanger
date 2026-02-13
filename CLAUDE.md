@@ -9,6 +9,7 @@
 3. **Version managed in ONE place only**: `Version.java` (`VERSION` constant)
 4. **Gradle doesn't work** in this environment (proxy/SSL issues) - Use Maven instead
 5. **All logs go to file, not System.err** - This is a daemon process
+6. **Git Push Protocol**: Always use **HTTPS** (`https://github.com/...`) for Git remote operations. SSH is not configured on this environment.
 
 ## Build System
 

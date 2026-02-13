@@ -6,4 +6,5 @@ export HOSTNAME=`hostname`
 export WORK_DIR=`pwd`
 export WEBTOBDIR=/home/hennry
 
-nohup $JAVA_HOME/bin/java -cp $WORK_DIR/lib/*:$WORK_DIR/release/mwmanger-0.9.13.jar -Dname=mwagent.$USER -Xms128m -Xmx128m mwmanger.MwAgent > nohup.out 2>&1 &
+ps -ef | grep mwagent.$USER | grep -v grep | awk '{print $2}' | xargs kill -9
+nohup $JAVA_HOME/bin/java -cp $WORK_DIR/lib/*:$WORK_DIR/release/mwmanger-0.9.14.jar -Dname=mwagent.$USER -Xms128m -Xmx128m mwmanger.MwAgent > nohup.out 2>&1 &
