@@ -20,6 +20,7 @@ import javax.net.ssl.X509TrustManager;
 
 import org.json.simple.JSONArray;
 import org.json.simple.JSONObject;
+import org.json.simple.parser.JSONParser;
 
 import mwagent.common.Common;
 import mwagent.vo.CommandVO;
@@ -31,9 +32,10 @@ import static mwagent.common.Config.getConfig;
  * 
  * Supported additional_params (String):
  * - Domain name or domain:port. Defaults to port 443.
+ * - JSON string: {"domain_name": "...", "port": ..., "ip": "..."}
  * 
  * Example additional_params:
- * "google.com" or "example.com:8443"
+ * "google.com" or "example.com:8443" or "{\"domain_name\":\"google.com\",\"port\":443,\"ip\":\"142.250.190.46\"}"
  */
 public class SSLCertiFunc implements AgentFunc {
 
@@ -42,18 +44,37 @@ public class SSLCertiFunc implements AgentFunc {
 
 		String param = command.getAdditionalParams();
 		
-		//String url = "https://" + param;
-		
-		//httpsGet(url);
-		
-		String[] dnp = getDomainNPort(param);
-		
-		String domain = dnp[0];
-		String port = dnp[1];
+		String domain = "";
+		String port = "443";
+		String ip = "127.0.0.1";
+
+		if (param != null && param.trim().startsWith("{")) {
+			try {
+				JSONParser parser = new JSONParser();
+				JSONObject json = (JSONObject) parser.parse(param);
+				if (json.get("domain_name") != null) domain = (String) json.get("domain_name");
+				if (json.get("port") != null) port = String.valueOf(json.get("port"));
+				if (json.get("ip") != null) ip = (String) json.get("ip");
 				
-		X509Certificate[] validCerts = checkSSLCertificate(domain, "127.0.0.1", Integer.parseInt(port));
+				if (domain.isEmpty()) {
+					String[] dnp = getDomainNPort(param);
+					domain = dnp[0];
+					port = dnp[1];
+				}
+			} catch (Exception e) {
+				String[] dnp = getDomainNPort(param);
+				domain = dnp[0];
+				port = dnp[1];
+			}
+		} else {
+			String[] dnp = getDomainNPort(param);
+			domain = dnp[0];
+			port = dnp[1];
+		}
+				
+		X509Certificate[] validCerts = checkSSLCertificate(domain, ip, Integer.parseInt(port));
 		
-		ResultVO rv = printValidCerts(param, validCerts);
+		ResultVO rv = printValidCerts(domain, validCerts);
 		
 		return Common.makeOneResultArray(rv, command);
 	
