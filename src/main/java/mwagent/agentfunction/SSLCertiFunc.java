@@ -118,6 +118,7 @@ public class SSLCertiFunc implements AgentFunc {
 			i++;
 			JSONObject certObj = new JSONObject();
 			certObj.put("index", Integer.toString(i));
+			certObj.put("isCA", c.getBasicConstraints() != -1);
 			certObj.put("notafter", c.getNotAfter().toString());
 			certObj.put("notbefore", c.getNotBefore().toString());
 			certObj.put("serial", String.format("%032X", c.getSerialNumber()));
@@ -226,15 +227,19 @@ public class SSLCertiFunc implements AgentFunc {
 				SSLSession session = socket.getSession();
 				Certificate[] certificates = session.getPeerCertificates();
 				
-				for(Certificate certificate : certificates ){
-					
-					
-					if (certificate instanceof X509Certificate) {
+				if (certificates != null && certificates.length > 0) {
+					Certificate firstCert = certificates[0];
+					if (firstCert instanceof X509Certificate) {
+						X509Certificate leafCert = (X509Certificate) firstCert;
 						
-						X509Certificate cert = (X509Certificate) certificate;
-						
-						if (isCertificateValidForDomain(cert, domain))validCerts.add(cert);
-						
+						// Leaf 인증서가 도메인과 일치하는지 확인 후, 일치하면 체인 전체를 추가
+						if (isCertificateValidForDomain(leafCert, domain)) {
+							for (Certificate certificate : certificates) {
+								if (certificate instanceof X509Certificate) {
+									validCerts.add((X509Certificate) certificate);
+								}
+							}
+						}
 					}
 				}
 			}
