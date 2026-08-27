@@ -32,15 +32,23 @@ public class ExtractLog extends Order {
     @Override
     public int execute() {
         try {
-            String fileFullName = getFileFullName();
             String additionalParamsStr = commandVo.getAdditionalParams();
 
             JSONParser parser = new JSONParser();
             JSONObject params = (JSONObject) parser.parse(additionalParamsStr);
 
+            String fileParam = (String) params.get("file");
+            if (fileParam != null && !fileParam.trim().isEmpty()) {
+                java.io.File f = new java.io.File(fileParam);
+                commandVo.setTargetFilePath(f.getParent() + java.io.File.separator);
+                commandVo.setTargetFileName(f.getName());
+            }
+            String fileFullName = getFileFullName();
+
             String start = (String) params.get("start");
             String end = (String) params.get("end");
             String dateRegex = (String) params.get("dateRegex");
+            String abbreviatePrefix = (String) params.get("abbreviatePrefix");
             
             JSONArray keywordsArray = (JSONArray) params.get("keywords");
             String[] keywords = new String[0];
@@ -51,7 +59,7 @@ public class ExtractLog extends Order {
                 }
             }
 
-            List<BlockResult> blocks = extract(fileFullName, start, end, dateRegex, keywords);
+            List<BlockResult> blocks = extract(fileFullName, start, end, dateRegex, abbreviatePrefix, keywords);
 
             JSONArray resultArray = new JSONArray();
             for (BlockResult block : blocks) {
@@ -123,6 +131,7 @@ public class ExtractLog extends Order {
                                       String start,
                                       String end,
                                       String dateRegex,
+                                      String abbreviatePrefix,
                                       String... keywords) throws IOException {
 
         LocalDateTime startTime = LocalDateTime.parse(start, TS_FORMAT);
@@ -145,7 +154,7 @@ public class ExtractLog extends Order {
                 }
 
                 if (ts != null) {
-                    flushBlock(accByFirstLine, currentBlock, currentFirstLineContent, inRange, keywords);
+                    flushBlock(accByFirstLine, currentBlock, currentFirstLineContent, inRange, keywords, abbreviatePrefix);
 
                     currentBlock.setLength(0);
                     currentBlock.append(line);
@@ -157,7 +166,7 @@ public class ExtractLog extends Order {
                     }
                 }
             }
-            flushBlock(accByFirstLine, currentBlock, currentFirstLineContent, inRange, keywords);
+            flushBlock(accByFirstLine, currentBlock, currentFirstLineContent, inRange, keywords, abbreviatePrefix);
         }
 
         List<BlockResult> results = new ArrayList<>();
@@ -179,7 +188,8 @@ public class ExtractLog extends Order {
                             StringBuilder block,
                             String firstLineContent,
                             boolean inRange,
-                            String[] keywords) {
+                            String[] keywords,
+                            String abbreviatePrefix) {
         if (block.length() == 0 || !inRange) {
             return;
         }
@@ -187,12 +197,66 @@ public class ExtractLog extends Order {
         if (!containsAnyKeyword(text, keywords)) {
             return;
         }
+        if (abbreviatePrefix != null && !abbreviatePrefix.isEmpty()) {
+            text = abbreviateText(text, abbreviatePrefix);
+        }
 
         Accumulator acc = accByFirstLine.get(firstLineContent);
         if (acc == null) {
             accByFirstLine.put(firstLineContent, new Accumulator(text));
         } else {
             acc.count++;
+        }
+    }
+
+    private String abbreviateText(String text, String prefix) {
+        String[] lines = text.split("\\r?\\n");
+        if (lines.length <= 3) {
+            return text;
+        }
+
+        StringBuilder sb = new StringBuilder();
+        int consecutiveCount = 0;
+        String firstAbbrevLine = null;
+        String lastAbbrevLine = null;
+
+        for (int i = 0; i < lines.length; i++) {
+            String line = lines[i];
+            if (line.startsWith(prefix)) {
+                if (consecutiveCount == 0) {
+                    firstAbbrevLine = line;
+                }
+                lastAbbrevLine = line;
+                consecutiveCount++;
+            } else {
+                if (consecutiveCount > 0) {
+                    flushAbbreviation(sb, firstAbbrevLine, lastAbbrevLine, consecutiveCount);
+                    consecutiveCount = 0;
+                }
+                sb.append(line).append(System.lineSeparator());
+            }
+        }
+        if (consecutiveCount > 0) {
+            flushAbbreviation(sb, firstAbbrevLine, lastAbbrevLine, consecutiveCount);
+        }
+
+        String result = sb.toString();
+        if (result.endsWith(System.lineSeparator()) && !text.endsWith(System.lineSeparator())) {
+            result = result.substring(0, result.length() - System.lineSeparator().length());
+        }
+        return result;
+    }
+
+    private void flushAbbreviation(StringBuilder sb, String firstLine, String lastLine, int count) {
+        if (count == 1) {
+            sb.append(firstLine).append(System.lineSeparator());
+        } else if (count == 2) {
+            sb.append(firstLine).append(System.lineSeparator());
+            sb.append(lastLine).append(System.lineSeparator());
+        } else {
+            sb.append(firstLine).append(System.lineSeparator());
+            sb.append("...").append(System.lineSeparator());
+            sb.append(lastLine).append(System.lineSeparator());
         }
     }
 

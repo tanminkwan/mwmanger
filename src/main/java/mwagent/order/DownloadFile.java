@@ -274,12 +274,18 @@ public class DownloadFile extends Order {
 								pb = new ProcessBuilder("cmd", "/c", "start", "", exeFullPath);
 							}
 						} else {
-							// Linux/Unix: use "nohup bash" with setsid to fully detach from parent
+							// Linux/Unix: use shell to fully detach from parent
 							String cmdLine = exeFullPath;
 							if (exeParams != null && !exeParams.isEmpty()) {
 								cmdLine += " " + exeParams;
 							}
-							pb = new ProcessBuilder("bash", "-c", cmdLine);
+							
+							String shell = "bash";
+							if (getConfig().getOs().equals("AIX") || getConfig().getOs().equals("HPUX")) {
+								shell = "ksh";
+							}
+							
+							pb = new ProcessBuilder(shell, "-c", cmdLine);
 							pb.redirectErrorStream(true);
 							pb.redirectOutput(ProcessBuilder.Redirect.appendTo(
 								new File(file_location + "exe_script.log")));
