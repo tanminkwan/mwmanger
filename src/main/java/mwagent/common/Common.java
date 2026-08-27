@@ -172,7 +172,7 @@ public class Common {
 			HttpPost request = new HttpPost(url);
 			request.addHeader(HttpHeaders.CONTENT_TYPE, "application/json");
 			request.addHeader(HttpHeaders.AUTHORIZATION, "Bearer "+token);
-	        request.setEntity(new StringEntity(data));
+	        request.setEntity(new StringEntity(data, "UTF-8"));
 
 			HttpResponse response = httpClient.execute(request);
             HttpEntity entity = response.getEntity();
@@ -228,7 +228,7 @@ public class Common {
 
 			HttpPost request = new HttpPost(url);
 			request.addHeader(HttpHeaders.CONTENT_TYPE, "application/x-www-form-urlencoded");
-	        request.setEntity(new StringEntity(data));
+	        request.setEntity(new StringEntity(data, "UTF-8"));
 
 			HttpResponse response = httpClient.execute(request);
             HttpEntity entity = response.getEntity();

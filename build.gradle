@@ -4,11 +4,13 @@ plugins {
     id 'jacoco'
 }
 
-group = 'com.leebalso'
-version = '0.9.25'
+group = 'com.kdb'
+version = '0.9.27'
 
-sourceCompatibility = '1.8'
-targetCompatibility = '1.8'
+java {
+    sourceCompatibility = '1.8'
+    targetCompatibility = '1.8'
+}
 
 repositories {
     mavenCentral()
