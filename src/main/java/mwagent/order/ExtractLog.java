@@ -147,7 +147,7 @@ public class ExtractLog extends Order {
         boolean inRange = false;
         String currentFirstLineContent = "";
 
-        try (BufferedReader reader = Files.newBufferedReader(Paths.get(filePath), java.nio.charset.Charset.forName(charset))) {
+        try (BufferedReader reader = new BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(filePath), charset))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 Matcher m = tsPattern.matcher(line);
