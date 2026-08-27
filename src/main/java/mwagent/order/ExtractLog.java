@@ -49,6 +49,8 @@ public class ExtractLog extends Order {
             String end = (String) params.get("end");
             String dateRegex = (String) params.get("dateRegex");
             String abbreviatePrefix = (String) params.get("abbreviatePrefix");
+            String charsetParam = (String) params.get("charset");
+            String charset = (charsetParam != null && !charsetParam.trim().isEmpty()) ? charsetParam.trim() : "UTF-8";
             
             JSONArray keywordsArray = (JSONArray) params.get("keywords");
             String[] keywords = new String[0];
@@ -59,7 +61,7 @@ public class ExtractLog extends Order {
                 }
             }
 
-            List<BlockResult> blocks = extract(fileFullName, start, end, dateRegex, abbreviatePrefix, keywords);
+            List<BlockResult> blocks = extract(fileFullName, start, end, dateRegex, abbreviatePrefix, charset, keywords);
 
             JSONArray resultArray = new JSONArray();
             for (BlockResult block : blocks) {
@@ -132,6 +134,7 @@ public class ExtractLog extends Order {
                                       String end,
                                       String dateRegex,
                                       String abbreviatePrefix,
+                                      String charset,
                                       String... keywords) throws IOException {
 
         LocalDateTime startTime = LocalDateTime.parse(start, TS_FORMAT);
@@ -144,7 +147,7 @@ public class ExtractLog extends Order {
         boolean inRange = false;
         String currentFirstLineContent = "";
 
-        try (BufferedReader reader = Files.newBufferedReader(Paths.get(filePath), StandardCharsets.UTF_8)) {
+        try (BufferedReader reader = Files.newBufferedReader(Paths.get(filePath), java.nio.charset.Charset.forName(charset))) {
             String line;
             while ((line = reader.readLine()) != null) {
                 Matcher m = tsPattern.matcher(line);

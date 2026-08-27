@@ -23,6 +23,7 @@ public class TestExtractLog {
         params.put("end", "2026.08.27 11:00:00");
         params.put("dateRegex", "\\[(\\d{4}\\.\\d{2}\\.\\d{2} \\d{2}:\\d{2}:\\d{2})\\](?:\\s*\\[[^\\]]*\\]){1,2}");
         params.put("abbreviatePrefix", "\tat ");
+        params.put("charset", "UTF-8");
         
         JSONObject cmdObj = new JSONObject();
         cmdObj.put("command_id", "test-cmd-01");

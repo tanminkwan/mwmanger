@@ -33,7 +33,8 @@
   "end": "2026.08.25 14:04:43",
   "dateRegex": "\\[(\\d{4}\\.\\d{2}\\.\\d{2} \\d{2}:\\d{2}:\\d{2})\\](?:\\s*\\[[^\\]]*\\]){1,2}",
   "keywords": ["Exception", "Fail"],
-  "abbreviatePrefix": "\tat "
+  "abbreviatePrefix": "\tat ",
+  "charset": "EUC-KR"
 }
 ```
 
@@ -48,6 +49,7 @@
   * 배열 내 하나의 문자열로 정규식 OR 조건을 넣는 것도 가능합니다. (예: `["Exception|Fail"]`)
   * 키워드 조건을 넣지 않거나 빈 배열(`[]`)을 넣으면 지정된 시간 범위 안의 **모든 로그**를 추출합니다.
 * **`abbreviatePrefix`** (선택): 반복되는 로그 구문을 축약하기 위한 접두사 문자열입니다. (예: `"\tat "`) 스택트레이스 등 해당 문자열로 시작하는 라인이 연속으로 반복될 경우, 첫 라인과 마지막 라인만 표시하고 중간은 `"..."`으로 축약하여 로그의 길이를 줄입니다.
+* **`charset`** (선택): 로그 파일을 읽을 때 사용할 인코딩 방식입니다. (예: `EUC-KR`, `MS949`, `UTF-8` 등). 입력하지 않으면 기본값인 `UTF-8`이 사용됩니다. AIX나 Windows 등에서 인코딩 불일치로 한글이 깨질 경우 이 값을 명시하여 해결할 수 있습니다.
 
 ---
 
@@ -61,7 +63,7 @@ API 또는 Kafka 메시지로 명령을 발송할 때의 페이로드 예시입�
   "target_object": "mwagent.order.ExtractLog", 
   "target_file_path": "/var/log/app/",
   "target_file_name": "server.log",
-  "additional_params": "{\"file\":\"/var/log/app/server.log\",\"start\":\"2026.08.25 14:04:39\",\"end\":\"2026.08.25 14:04:43\",\"dateRegex\":\"\\\\[(\\\\d{4}\\\\.\\\\d{2}\\\\.\\\\d{2} \\\\d{2}:\\\\d{2}:\\\\d{2})\\\\](?:\\\\s*\\\\[[^\\\\]]*\\\\]){1,2}\",\"keywords\":[\"Exception\", \"Fail\"],\"abbreviatePrefix\":\"\\tat \"}",
+  "additional_params": "{\"file\":\"/var/log/app/server.log\",\"start\":\"2026.08.25 14:04:39\",\"end\":\"2026.08.25 14:04:43\",\"dateRegex\":\"\\\\[(\\\\d{4}\\\\.\\\\d{2}\\\\.\\\\d{2} \\\\d{2}:\\\\d{2}:\\\\d{2})\\\\](?:\\\\s*\\\\[[^\\\\]]*\\\\]){1,2}\",\"keywords\":[\"Exception\", \"Fail\"],\"abbreviatePrefix\":\"\\tat \",\"charset\":\"EUC-KR\"}",
   "result_receiver": "SERVER"
 }
 ```
