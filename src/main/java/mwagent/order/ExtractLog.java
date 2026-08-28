@@ -7,7 +7,9 @@ import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
@@ -22,8 +24,6 @@ import org.json.simple.JSONObject;
 import org.json.simple.parser.JSONParser;
 
 public class ExtractLog extends Order {
-
-    private static final DateTimeFormatter TS_FORMAT = DateTimeFormatter.ofPattern("yyyy.MM.dd HH:mm:ss");
 
     public ExtractLog(JSONObject command) {
         super(command);
@@ -45,9 +45,10 @@ public class ExtractLog extends Order {
             }
             String fileFullName = getFileFullName();
 
-            String start = (String) params.get("start");
-            String end = (String) params.get("end");
-            String dateRegex = (String) params.get("dateRegex");
+            String targetDate = (String) params.get("targetDate");
+            String startTime = (String) params.get("startTime");
+            String endTime = (String) params.get("endTime");
+            Object dateRegex = params.get("dateRegex");
             String abbreviatePrefix = (String) params.get("abbreviatePrefix");
             String charsetParam = (String) params.get("charset");
             String charset = (charsetParam != null && !charsetParam.trim().isEmpty()) ? charsetParam.trim() : "UTF-8";
@@ -61,7 +62,7 @@ public class ExtractLog extends Order {
                 }
             }
 
-            List<BlockResult> blocks = extract(fileFullName, start, end, dateRegex, abbreviatePrefix, charset, keywords);
+            List<BlockResult> blocks = extract(fileFullName, targetDate, startTime, endTime, dateRegex, abbreviatePrefix, charset, keywords);
 
             JSONArray resultArray = new JSONArray();
             for (BlockResult block : blocks) {
@@ -129,43 +130,105 @@ public class ExtractLog extends Order {
         }
     }
 
+    private static class RegexRule {
+        Pattern pattern;
+        DateTimeFormatter dateFormatter;
+        DateTimeFormatter timeFormatter;
+        RegexRule(Pattern pattern, DateTimeFormatter dateFormatter, DateTimeFormatter timeFormatter) {
+            this.pattern = pattern;
+            this.dateFormatter = dateFormatter;
+            this.timeFormatter = timeFormatter;
+        }
+    }
+
     private List<BlockResult> extract(String filePath,
-                                      String start,
-                                      String end,
-                                      String dateRegex,
+                                      String targetDateStr,
+                                      String startTimeStr,
+                                      String endTimeStr,
+                                      Object dateRegexObj,
                                       String abbreviatePrefix,
                                       String charset,
                                       String... keywords) throws IOException {
 
-        LocalDateTime startTime = LocalDateTime.parse(start, TS_FORMAT);
-        LocalDateTime endTime = LocalDateTime.parse(end, TS_FORMAT);
-        Pattern tsPattern = Pattern.compile(dateRegex);
+        DateTimeFormatter paramFormatter = DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
+        LocalDateTime startTime = LocalDateTime.parse(targetDateStr + startTimeStr, paramFormatter);
+        LocalDateTime endTime = LocalDateTime.parse(targetDateStr + endTimeStr, paramFormatter);
+
+        List<RegexRule> rules = new ArrayList<>();
+        if (dateRegexObj instanceof JSONArray) {
+            JSONArray arr = (JSONArray) dateRegexObj;
+            for (Object obj : arr) {
+                JSONObject jsonRule = (JSONObject) obj;
+                String regex = (String) jsonRule.get("regex");
+                String dateFormat = (String) jsonRule.get("dateFormat");
+                String timeFormat = (String) jsonRule.get("timeFormat");
+                if (dateFormat == null || dateFormat.trim().isEmpty()) dateFormat = "yyyyMMdd";
+                if (timeFormat == null || timeFormat.trim().isEmpty()) timeFormat = "HH:mm:ss";
+                rules.add(new RegexRule(Pattern.compile(regex), DateTimeFormatter.ofPattern(dateFormat), DateTimeFormatter.ofPattern(timeFormat)));
+            }
+        }
+
+        LocalDate baseDate = LocalDate.parse(targetDateStr, DateTimeFormatter.ofPattern("yyyyMMdd"));
+        LocalDate currentDate = baseDate;
+        LocalTime previousTime = null;
 
         Map<String, Accumulator> accByFirstLine = new LinkedHashMap<>();
 
         StringBuilder currentBlock = new StringBuilder();
+        int currentBlockLineCount = 0;
         boolean inRange = false;
         String currentFirstLineContent = "";
 
         try (BufferedReader reader = new BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(filePath), charset))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                Matcher m = tsPattern.matcher(line);
                 LocalDateTime ts = null;
-                if (m.lookingAt()) {
-                    ts = tryParse(m.group(1));
+                Matcher m = null;
+
+                for (RegexRule rule : rules) {
+                    Matcher matcher = rule.pattern.matcher(line);
+                    if (matcher.lookingAt()) {
+                        try {
+                            if (matcher.groupCount() >= 2) {
+                                LocalDate d = LocalDate.parse(matcher.group(1), rule.dateFormatter);
+                                LocalTime t = LocalTime.parse(matcher.group(2), rule.timeFormatter);
+                                ts = LocalDateTime.of(d, t);
+                            } else if (matcher.groupCount() == 1) {
+                                LocalTime t = LocalTime.parse(matcher.group(1), rule.timeFormatter);
+                                ts = LocalDateTime.of(currentDate, t);
+                            }
+                            if (ts != null) {
+                                m = matcher;
+                                break;
+                            }
+                        } catch (Exception e) {
+                            // ignore and try next rule
+                        }
+                    }
                 }
 
                 if (ts != null) {
+                    if (previousTime != null && ts.toLocalTime().isBefore(previousTime) && previousTime.getHour() >= 23 && ts.getHour() == 0) {
+                        currentDate = currentDate.plusDays(1);
+                        ts = LocalDateTime.of(currentDate, ts.toLocalTime());
+                    } else if (ts.toLocalDate().isAfter(currentDate)) {
+                        currentDate = ts.toLocalDate();
+                    }
+                    previousTime = ts.toLocalTime();
+
                     flushBlock(accByFirstLine, currentBlock, currentFirstLineContent, inRange, keywords, abbreviatePrefix);
 
                     currentBlock.setLength(0);
                     currentBlock.append(line);
+                    currentBlockLineCount = 1;
                     currentFirstLineContent = line.substring(m.end()).trim();
                     inRange = !ts.isBefore(startTime) && !ts.isAfter(endTime);
                 } else {
-                    if (currentBlock.length() > 0) {
-                        currentBlock.append(System.lineSeparator()).append(line);
+                    if (currentBlockLineCount < 300) {
+                        if (currentBlock.length() > 0) {
+                            currentBlock.append(System.lineSeparator()).append(line);
+                        }
+                        currentBlockLineCount++;
                     }
                 }
             }
@@ -177,14 +240,6 @@ public class ExtractLog extends Order {
             results.add(new BlockResult(acc.text, acc.count));
         }
         return results;
-    }
-
-    private LocalDateTime tryParse(String dateStr) {
-        try {
-            return LocalDateTime.parse(dateStr, TS_FORMAT);
-        } catch (Exception e) {
-            return null;
-        }
     }
 
     private void flushBlock(Map<String, Accumulator> accByFirstLine,
